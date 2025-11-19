@@ -482,5 +482,9 @@
     <definition name="thanks.page" extends="publicLayout">
         <put-attribute name="title" value="Agrocosa" />
         <put-attribute name="publicbody" value="/WEB-INF/tiles/common/thanks.jsp" />
-    </definition>
+    </definition>   
+    <definition name="warehouseType.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/warehouseType.jsp" />
+    </definition>  
 </tiles-definitions>

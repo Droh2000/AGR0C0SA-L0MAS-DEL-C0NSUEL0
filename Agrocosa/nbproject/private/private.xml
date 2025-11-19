@@ -11,6 +11,11 @@
         </file>
     </editor-bookmarks>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
-        <group/>
+        <group>
+            <file>file:/C:/P_R_O_Y_E_C_T_O_S/Agrocosa/Agrocosa/web/WEB-INF/web.xml</file>
+            <file>file:/C:/P_R_O_Y_E_C_T_O_S/Agrocosa/Agrocosa/web/WEB-INF/tiles/page/warehouseType.jsp</file>
+            <file>file:/C:/P_R_O_Y_E_C_T_O_S/Agrocosa/Agrocosa/src/java/Agrocosa/WarehouseTypeManagementServlet.java</file>
+            <file>file:/C:/P_R_O_Y_E_C_T_O_S/Agrocosa/Agrocosa/web/WEB-INF/config/tiles-defs.xml</file>
+        </group>
     </open-files>
 </project-private>

@@ -676,6 +676,10 @@
         <servlet-name>DriverAgreementWarehouseServlet</servlet-name>
         <servlet-class>Agrocosa.DriverAgreementWarehouseServlet</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>WarehouseTypeManagementServlet</servlet-name>
+        <servlet-class>Agrocosa.WarehouseTypeManagementServlet</servlet-class>
+    </servlet>
     <!-- ========================================================================= -->
     <!--        END Servlet config            -->
     <!-- ========================================================================= -->
@@ -1322,6 +1326,10 @@
     <servlet-mapping>
         <servlet-name>DriverAgreementWarehouseServlet</servlet-name>
         <url-pattern>/protected/driverAgreementWarehouse.do</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>WarehouseTypeManagementServlet</servlet-name>
+        <url-pattern>/protected/warehouseTypeManagement.do</url-pattern>
     </servlet-mapping>
     <!--         END Servlet Mapping config            -->
 </web-app>
