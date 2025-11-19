@@ -1,0 +1,278 @@
+package AgrocosaTransactions;
+
+import SIDWebEngine.*;
+import java.sql.*;
+import xmlNodeArray.*;
+
+/**
+ *
+ * @author Juan
+ */
+public class RetrieveMenuTransaction extends SIDWebTransaction {
+
+    protected PreparedStatement pstmtRetrieveAllMenus;
+    protected PreparedStatement pstmtRetrieveMenusByRoot;
+    protected PreparedStatement pstmtRetrieveSelectedMenus;
+
+    /**
+     * Default Constructor
+     *
+     * @exception (none)
+     */
+    public RetrieveMenuTransaction() {
+        super();
+        SetTransactionType(SIDWebTransaction.RetrieveType);
+    }
+
+    /**
+     * Checks to see if the node Array is supported
+     *
+     * @param nodeArray
+     * @return <B>true</B> if the nodeArray is supported. <B>false</B> otherwise
+     * @exception (none)
+     */
+    @Override
+    public boolean Supports(xmlNodeArray nodeArray) {
+
+        //Add tag names as comma separated Strings to the mandatoryTags array
+        String[] mandatoryTags = {"idUser"};
+        //Add tag names as comma separated Strings to the optionalTags array
+        String[] optionalTags = {};
+        //Add tag names as comma separated Strings to the mandatorySets array
+        String[] mandatorySets = {};
+        //Add tag names as comma separated Strings to the optionalSetTags array
+        String[] optionalSets = {};
+
+        xmlNodeArray errArray = new xmlNodeArray();
+        for (int i = 0; i < mandatoryTags.length; i++) {
+            if (!nodeArray.existValue(mandatoryTags[i])) {
+                System.out.println("<RetrieveMenuTransaction::Supports> " + mandatoryTags[i] + " Mandatory tag not found or value is empty/null");
+                errArray.add("ERROR", "MANDATORY_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalTags.length; i++) {
+            if (nodeArray.exist(optionalTags[i]) && !nodeArray.existValue(optionalTags[i])) {
+                System.out.println("<RetrieveMenuTransaction::Supports> " + optionalTags[i] + " Optional tag not found or value is empty/null");
+                errArray.add("OPTIONAL_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < mandatorySets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) == null || nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0) {
+                System.out.println("<RetrieveMenuTransaction::Supports> " + mandatorySets[i] + " Mandatory Set not found or value is empty/null");
+                errArray.add("MANDATORY_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalSets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) != null && (nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0)) {
+                System.out.println("<RetrieveMenuTransaction::Supports> " + optionalSets[i] + " Optional Set not found or value is empty/null");
+                errArray.add("OPTIONAL_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prepares the SQL statements to be executed
+     *
+     * @return <B>true</B> for successful preparation;
+     * <B>false</B> for unsuccessful preparation
+     * @exception (none)
+     */
+    @Override
+    public synchronized boolean PrepareStatements() {
+        //Note1 : Use PreparedStatements instead of Statements where ever possible
+        //Note2 : If transaction contains no prepared statements, delete entire function
+        //        Unless there are nested transaction, then Prepare will call those.
+        try {
+            Connection con = this.GetSIDDataBase().GetConnection();
+            pstmtRetrieveAllMenus = con.prepareStatement("select idMenu, Title "
+                    + "from menu "
+                    + "Where Active = 1 "
+                    + "and Parent <> 'root' "
+                    + "and idMenu not in (select idMenu from usermenu where idUser = ?) "
+                    + "Order by Title ");
+
+            pstmtRetrieveMenusByRoot = con.prepareStatement("select idMenu, Title "
+                    + "from menu "
+                    + "Where Active = 1 "
+                    + "and Parent <> 'root' "
+                    + "and Parent = ? "
+                    + "and idMenu not in (select idMenu from usermenu where idUser = ?) "
+                    + "Order by Title ");
+
+            pstmtRetrieveSelectedMenus = con.prepareStatement("select menu.idMenu, menu.Title "
+                    + "from usermenu inner join "
+                    + "menu on menu.idMenu = usermenu.idMenu inner join "
+                    + "user on user.idUser = usermenu.idUser "
+                    + "Where usermenu.idUser = ? "
+                    + "Order by Title");
+
+            this.addPreparedStatement(pstmtRetrieveAllMenus);
+            this.addPreparedStatement(pstmtRetrieveMenusByRoot);
+            this.addPreparedStatement(pstmtRetrieveSelectedMenus);
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("RetrieveMenuTransaction::PrepareStatements> SQLException: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * executes sql statements using input arguments and returns result
+     *
+     * @return valid node array if successful else null
+     * @exception SQLException if sql error occurs
+     * @exception Exception if non sql error occurs
+     */
+    @Override
+    public synchronized xmlNodeArray Execute() throws SQLException, Exception {
+        xmlNodeArray resultArray = null;
+        xmlTable availableTable = null;
+        ResultSet rset = null;
+        String message = "OK";
+        String idUser = "";
+
+        try {
+//            System.out.println("<RetrieveMenuTransaction::Execute> enter");
+
+            resultArray = new xmlNodeArray();
+            idUser = GetNodeArray().find("idUser").getStringValue();
+            resultArray.add("idUser", idUser);
+
+            //selected menus
+            pstmtRetrieveSelectedMenus.setString(1, idUser);
+            rset = pstmtRetrieveSelectedMenus.executeQuery();
+            xmlTable guardTable = this.formatDataTable(rset);
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+            resultArray.add("SelectedMenus_Table", guardTable);
+
+            //Available Menus
+            if (this.GetNodeArray().existValue("SelectedRootMenu")
+                    && !GetNodeArray().find("SelectedRootMenu").getStringValue().equals("empty")) {
+                pstmtRetrieveMenusByRoot.setString(1, GetNodeArray().find("SelectedRootMenu").getStringValue());
+                pstmtRetrieveMenusByRoot.setString(2, GetNodeArray().find("idUser").getStringValue());
+                rset = pstmtRetrieveMenusByRoot.executeQuery();
+                availableTable = this.formatDataTable(rset);
+                resultArray.add("SelectedRootMenu", GetNodeArray().find("SelectedRootMenu").getStringValue());
+            } else {
+                pstmtRetrieveAllMenus.setString(1, GetNodeArray().find("idUser").getStringValue());
+                rset = pstmtRetrieveAllMenus.executeQuery();
+                availableTable = this.formatDataTable(rset);
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+            resultArray.add("AvailableMenus_Table", availableTable);
+
+            resultArray.add("RESPONSE_CODE", "PASS");
+            resultArray.add("RESPONSE_MESSAGE", message);
+            resultArray.add("RESPONSE_DETAIL", "");
+
+            return resultArray;
+        } catch (SQLException e) {
+            System.out.println("RetrieveMenuTransaction::Execute> SQLException: " + e.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "SQLException");
+            resultArray.add("RESPONSE_DETAIL", e.getMessage());
+            return resultArray;
+        } catch (Exception ex) {
+            System.out.println("RetrieveMenuTransaction::Execute> Exception: " + ex.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "Exception");
+            resultArray.add("RESPONSE_DETAIL", ex.getMessage());
+            return resultArray;
+        } finally {
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+            CloseStatements();
+
+//            System.out.println("<RetrieveMenuTransaction::Execute> exit");
+        }
+    }
+
+    /**
+     * Generates an xmlNodeArray containing parameters for this transaction
+     *
+     * @return xmlNodeArray that contains parameters for the transaction
+     * @exception (none)
+     */
+    @Override
+    public xmlNodeArray GenerateTestParameters() {
+        xmlNodeArray nodeArr = new xmlNodeArray();
+        nodeArr.add("TRANSACTION_CLASS_TO_EXECUTE", "AgrocosaTransactions.RetrieveMenuTransaction");
+        nodeArr.add("idUser", "2");
+        return nodeArr;
+    }
+
+    /**
+     * The main method for the transaction. Creates a database connection and an
+     * error Array, then executes the transaction and reports any errors
+     *
+     * @param argv argv[0] is an optional configuration file name
+     * @exception (none)
+     */
+    public static void main(String[] argv) {
+        try {
+            RetrieveMenuTransaction transaction = new RetrieveMenuTransaction();
+            SIDWebTransaction resultTransaction = null;
+            xmlNodeArray inputParameterArray = null;
+            //CIMDataBase database = null;
+            System.out.println("Usage: java -classpath ...AgrocosaTransactions.RetrieveMenuTransaction");
+
+            //<Add Database connection parameter for testing>
+            database = new SIDDataBase("jdbc:mysql://localhost:3306/desarrollat", "root", "entrar123");
+
+            transaction.SetSIDDataBase(database);
+            inputParameterArray = transaction.GenerateTestParameters();
+            if (!transaction.IsValidTransaction()) {
+                System.out.println(" RetrieveMenuTransaction contains an invalid transaction type.");
+            } else {
+                if (!transaction.Supports(inputParameterArray)) {
+                    System.out.println(" RetrieveMenuTransaction does not support this list of parameters.");
+                } else {
+                    resultTransaction = database.ExecuteTransaction("AgrocosaTransactions.RetrieveMenuTransaction", inputParameterArray);
+                    if (resultTransaction == null) {
+                        System.out.println("The transaction's result array is null.");
+                    } else {
+                        if (resultTransaction.GetError() != null) {
+                            resultTransaction.GetError().print();
+                        } else {
+                            if (resultTransaction.GetResultArray() == null) {
+                                System.out.println("RetrieveMenuTransaction - No results were returned.");
+                            } else {
+                                xmlNodeArray array = resultTransaction.GetResultArray();
+                                String str = xmlNodeArray.xmlNodeArray2String(array);
+                                array = xmlNodeArray.string2xmlNodeArray(str);
+                                System.out.println(str);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("RetrieveMenuTransaction::main> caught exception " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}

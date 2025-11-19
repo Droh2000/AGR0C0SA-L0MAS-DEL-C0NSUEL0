@@ -1,0 +1,443 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package AgrocosaTransactions;
+
+import SIDWebEngine.*;
+import java.sql.*;
+import xmlNodeArray.*;
+
+public class SaveConsumeRawMaterialTransaction extends SIDWebTransaction {
+
+    protected PreparedStatement pstmtSelectRMInventory;
+    protected PreparedStatement pstmtUpdateRMInventory;
+    protected PreparedStatement pstmtInsertRMInventoryLog;
+    protected PreparedStatement pstmtSelectStorage;
+    protected PreparedStatement pstmtUser;
+    protected PreparedStatement pstmtDelete;
+
+    /**
+     * Default Constructor
+     *
+     * @exception (none)
+     */
+    public SaveConsumeRawMaterialTransaction() {
+        super();
+        SetTransactionType(SIDWebTransaction.SaveType);
+    }
+
+    /**
+     * Checks to see if the node Array is supported
+     *
+     * @param nodeArray
+     * @return <B>true</B> if the nodeArray is supported. <B>false</B> otherwise
+     * @exception (none)
+     */
+    @Override
+    public boolean Supports(xmlNodeArray nodeArray) {
+
+        //Add tag names as comma separated Strings to the mandatoryTags array
+        String[] mandatoryTags = {
+            "idUser",
+            "dataTable4Save"
+        };
+
+        //Add tag names as comma separated Strings to the optionalTags array
+        String[] optionalTags = {};
+        //Add tag names as comma separated Strings to the mandatorySets array
+        String[] mandatorySets = {};
+        //Add tag names as comma separated Strings to the optionalSetTags array
+        String[] optionalSets = {};
+
+        xmlNodeArray errArray = new xmlNodeArray();
+        for (int i = 0; i < mandatoryTags.length; i++) {
+            if (!nodeArray.existValue(mandatoryTags[i])) {
+                System.out.println("<SaveConsumeRawMaterialTransaction::Supports> " + mandatoryTags[i] + " Mandatory tag not found or value is empty/null");
+                errArray.add("ERROR", "MANDATORY_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalTags.length; i++) {
+            if (nodeArray.exist(optionalTags[i]) && !nodeArray.existValue(optionalTags[i])) {
+                System.out.println("<SaveConsumeRawMaterialTransaction::Supports> " + optionalTags[i] + " Optional tag not found or value is empty/null");
+                errArray.add("OPTIONAL_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < mandatorySets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) == null || nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0) {
+                System.out.println("<SaveConsumeRawMaterialTransaction::Supports> " + mandatorySets[i] + " Mandatory Set not found or value is empty/null");
+                errArray.add("MANDATORY_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalSets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) != null && (nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0)) {
+                System.out.println("<SaveConsumeRawMaterialTransaction::Supports> " + optionalSets[i] + " Optional Set not found or value is empty/null");
+                errArray.add("OPTIONAL_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prepares the SQL statements to be executed
+     *
+     * @return <B>true</B> for successful preparation; <B>false</B> for
+     * unsuccessful preparation
+     * @exception (none)
+     */
+    @Override
+    public synchronized boolean PrepareStatements() {
+        //Note1 : Use PreparedStatements instead of Statements where ever possible
+        //Note2 : If transaction contains no prepared statements, delete entire function
+        //        Unless there are nested transaction, then Prepare will call those.
+        try {
+            Connection con = this.GetSIDDataBase().GetConnection();
+
+            pstmtSelectRMInventory = con.prepareStatement("select "
+                    + "idStorage, "
+                    + "idSubstorage, "
+                    + "RawMaterialName, "
+                    + "Quantity, "
+                    + "UOM "
+                    + "from rawmaterialinventory "
+                    + "where idStorage = ? "//1 idStorage
+                    + "and idSubstorage = ? "//2 idSubstorage
+                    + "and RawMaterialName = ? "//3 RawMaterialName
+                    + "and Quantity >= ? ");//4 Quantity
+
+            pstmtUpdateRMInventory = con.prepareStatement("update rawmaterialinventory set "
+                    + "Quantity = Quantity - ? "//1 Quanity
+                    + "where idStorage = ? "//2 idStorage
+                    + "and idSubstorage = ? "//3 idSubstorage
+                    + "and RawMaterialName = ? ");
+
+            pstmtInsertRMInventoryLog = con.prepareStatement("insert into rawmaterialinventorylog ( "
+                    + "MovementType, "
+                    + "RawMaterialTypeName, "
+                    + "RawMaterialName, "
+                    + "Quantity, "
+                    + "UOM, "
+                    + "StorageName, "
+                    + "SubstorageName, "
+                    + "Comments, "
+                    + "User, "
+                    + "InsertDate, "
+                    + "Active "
+                    + ") values ( "
+                    + "?, "//1 MovementType
+                    + "?, "//2 RawMaterialTypeName
+                    + "?, "//3 RawMaterialName
+                    + "?, "//4 Quantity
+                    + "?, "//5 UOM
+                    + "?, "//6 StorageName
+                    + "?, "//7 SubstorageName
+                    + "?, "//8 Comments
+                    + "?, "//9 User
+                    + "Now(), "
+                    + "1 "
+                    + ")");
+
+            pstmtSelectStorage = con.prepareStatement("SELECT "
+                    + "storage.idStorage, "
+                    + "storage.StorageName, "
+                    + "substorage.idSubstorage, "
+                    + "substorage.SubstorageName "
+                    + "FROM storage inner join "
+                    + "substorage on substorage.idStorage = storage.idStorage "
+                    + "where storage.StorageName = ? "//1 StorageName
+                    + "and substorage.SubstorageName = ?");//2 SubstorageName
+
+            pstmtUser = con.prepareStatement("select concat(FirstName,' ',LastName) User "
+                    + "from user "
+                    + "where idUser = ? ");
+
+            pstmtDelete = con.prepareStatement("delete  "
+                    + "from rawmaterialinventory "
+                    + "Where Quantity <= 0");
+                    
+            this.addPreparedStatement(pstmtSelectRMInventory);
+            this.addPreparedStatement(pstmtUpdateRMInventory);
+            this.addPreparedStatement(pstmtInsertRMInventoryLog);
+            this.addPreparedStatement(pstmtSelectStorage);
+            this.addPreparedStatement(pstmtUser);
+            this.addPreparedStatement(pstmtDelete);
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("SaveConsumeRawMaterialTransaction::PrepareStatements> SQLException: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * executes sql statements using input arguments and returns result
+     *
+     * @return valid node array if successful else null
+     * @exception SQLException if sql error occurs
+     * @exception Exception if non sql error occurs
+     */
+    @Override
+    public synchronized xmlNodeArray Execute() throws SQLException, Exception {
+        Connection conn = null;
+        xmlNodeArray resultArray = null;
+        ResultSet rset = null;
+        int rowsAffected = 0;
+        int idUser = 0;
+        String dataTable4Save = "";
+        String comments = "";
+        String userName = "";
+        String rawMaterialTypeName = null;
+        String rawMaterialName = null;
+        String storageName = null;
+        String substorageName = null;
+        String uom = null;
+        int quantity = 0;
+        int idStorage = 0;
+        int idSubstorage = 0;
+        String result = "";
+
+        try {
+            conn = this.GetSIDDataBase().GetConnection();
+            conn.setAutoCommit(false);
+            resultArray = new xmlNodeArray();
+
+            idUser = GetNodeArray().find("idUser").getIntValue();
+            dataTable4Save = GetNodeArray().find("dataTable4Save").getStringValue();
+
+            if (this.GetNodeArray().existValue("comments")) {
+                comments = GetNodeArray().find("comments").getStringValue();
+            }
+
+            //User Name
+            pstmtUser.setInt(1, idUser);
+            rset = pstmtUser.executeQuery();
+            if (rset.next()) {
+                userName = rset.getString("User");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            //replace
+            dataTable4Save = dataTable4Save.replace("[[", "");
+            dataTable4Save = dataTable4Save.replace("]]", "");
+            dataTable4Save = dataTable4Save.replace("\"", "");
+            dataTable4Save = dataTable4Save.replace("],[", "|");
+
+            String[] rowsData = dataTable4Save.split("\\|");
+
+            //Insert detail
+            for (String rowsData1 : rowsData) {
+                String[] fieldData = rowsData1.split(",");
+                rawMaterialTypeName = fieldData[0]; //rawMaterialTypeName
+                rawMaterialName = fieldData[1]; //rawMaterialName
+                storageName = fieldData[2]; //storageName
+                substorageName = fieldData[3]; //substorageName
+                quantity = Integer.parseInt(fieldData[4]); //quantity
+                uom = fieldData[5]; //uom
+
+                //StorageName & SubstorageName
+                pstmtSelectStorage.setString(1, storageName);
+                pstmtSelectStorage.setString(2, substorageName);
+                rset = pstmtSelectStorage.executeQuery();
+                if (rset.next()) {
+                    idStorage = rset.getInt("idStorage");
+                    idSubstorage = rset.getInt("idSubstorage");
+                }
+                if (rset != null) {
+                    rset.close();
+                    rset = null;
+                }
+
+                //validate if record exist in bininventory table
+                pstmtSelectRMInventory.setInt(1, idStorage);
+                pstmtSelectRMInventory.setInt(2, idSubstorage);
+                pstmtSelectRMInventory.setString(3, rawMaterialName);
+                pstmtSelectRMInventory.setInt(4, quantity);
+                rset = pstmtSelectRMInventory.executeQuery();
+                if (!rset.next()) {
+                    result += rawMaterialName + "|" + storageName + "|" + substorageName + "|" + quantity + ",   ";
+                }
+                if (rset != null) {
+                    rset.close();
+                    rset = null;
+                }
+            }
+            if (!result.equals("")) {
+                conn.rollback();
+                resultArray.add("error", "Los siguientes registros no se encuentran en la localidad de inventario seleccioanda o "
+                        + "la cantidad seleccioanda es mayor a la actual de inventario. Ningun movimiento ha sido registrado.");
+                resultArray.add("RESPONSE_CODE", "FAIL");
+                resultArray.add("RESPONSE_MESSAGE", "Los siguientes registros no se encuentran en la localidad de inventario seleccioanda o "
+                        + "la cantidad seleccioanda es mayor a la actual de inventario. Ningun movimiento ha sido registrado.");
+                resultArray.add("RESPONSE_DETAIL", result);
+                return resultArray;
+            }
+
+            
+            //save
+            for (String rowsData1 : rowsData) {
+                String[] fieldData = rowsData1.split(",");
+                rawMaterialTypeName = fieldData[0]; //cropTypeName
+                rawMaterialName = fieldData[1]; //cropName
+                storageName = fieldData[2]; //storageName
+                substorageName = fieldData[3]; //substorageName
+                quantity = Integer.parseInt(fieldData[4]); //quantity
+                uom = fieldData[5]; //uom
+                
+                //update
+                pstmtUpdateRMInventory.setInt(1, quantity);
+                pstmtUpdateRMInventory.setInt(2, idStorage);
+                pstmtUpdateRMInventory.setInt(3, idSubstorage);
+                pstmtUpdateRMInventory.setString(4, rawMaterialName);
+                rowsAffected = pstmtUpdateRMInventory.executeUpdate();
+                if (rowsAffected > 0) {
+                    //insert bininventorymovement
+                    pstmtInsertRMInventoryLog.setString(1, "Salida");
+                    pstmtInsertRMInventoryLog.setString(2, rawMaterialTypeName);
+                    pstmtInsertRMInventoryLog.setString(3, rawMaterialName);
+                    pstmtInsertRMInventoryLog.setInt(4, quantity);
+                    pstmtInsertRMInventoryLog.setString(5, uom);
+                    pstmtInsertRMInventoryLog.setString(6, storageName);
+                    pstmtInsertRMInventoryLog.setString(7, substorageName);
+                    pstmtInsertRMInventoryLog.setString(8, comments);
+                    pstmtInsertRMInventoryLog.setString(9, userName);
+                    rowsAffected = pstmtInsertRMInventoryLog.executeUpdate();
+                    if (rowsAffected > 0) {
+                        
+                        //delete inventory negative or zero
+                        pstmtDelete.executeUpdate();
+                        
+                        conn.commit();
+                        resultArray.add("Result", "La salida de insumos han sido registrados exitosamente.");
+                        resultArray.add("RESPONSE_CODE", "PASS");
+                        resultArray.add("RESPONSE_MESSAGE", "La salida de insumos han sido registrados exitosamente.");
+                        resultArray.add("RESPONSE_DETAIL", "");
+                    } else {
+                        conn.rollback();
+                        resultArray.add("Result", "La salida de insumos no pudieron ser registrados.");
+                        resultArray.add("RESPONSE_CODE", "FAIL");
+                        resultArray.add("RESPONSE_MESSAGE", "La Informacion no pudo ser registrada.");
+                        resultArray.add("RESPONSE_DETAIL", "");
+                    }
+                } else {
+                    conn.rollback();
+                    resultArray.add("Result", "La salida de insumos no pudieron ser registrados.");
+                    resultArray.add("RESPONSE_CODE", "FAIL");
+                    resultArray.add("RESPONSE_MESSAGE", "La Informacion no pudo ser registrada.");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                }
+
+            }
+
+            return resultArray;
+
+        } catch (SQLException e) {
+            conn.rollback();
+            System.out.println("SaveConsumeRawMaterialTransaction::Execute> SQLException: " + e.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "SQLException:" + e.getMessage());
+            resultArray.add("RESPONSE_DETAIL", e.getMessage());
+            return resultArray;
+        } catch (Exception ex) {
+            conn.rollback();
+            System.out.println("SaveConsumeRawMaterialTransaction::Execute> Exception: " + ex.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "Exception:" + ex.getMessage());
+            resultArray.add("RESPONSE_DETAIL", ex.getMessage());
+            return resultArray;
+        } finally {
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+            CloseStatements();
+        }
+    }
+
+    /**
+     * Generates an xmlNodeArray containing parameters for this transaction
+     *
+     * @return xmlNodeArray that contains parameters for the transaction
+     * @exception (none)
+     */
+    @Override
+    public xmlNodeArray GenerateTestParameters() {
+        xmlNodeArray nodeArr = new xmlNodeArray();
+        nodeArr.add("TRANSACTION_CLASS_TO_EXECUTE", "JonesPlasticTransactions.SaveConsumeRawMaterialTransaction");
+        nodeArr.add("idUser", "1");
+        nodeArr.add("customer", "BRP");
+        nodeArr.add("comments", "Embarcar antes del medio dia");
+        nodeArr.add("dataTable4Save", "[[\"BRP\",\"707900700\",\"1\",\"x\"],[\"BRP\",\"707900702\",\"2\",\"x\"],[\"BRP\",\"707900704\",\"3\",\"x\"],[\"BRP\",\"707900705\",\"4\",\"x\"]]");
+
+        return nodeArr;
+
+    }
+
+    /**
+     * The main method for the transaction. Creates a database connection and an
+     * error Array, then executes the transaction and reports any errors
+     *
+     * @param argv argv[0] is an optional configuration file name
+     * @exception (none)
+     */
+    public static void main(String[] argv) {
+        try {
+            SaveConsumeRawMaterialTransaction transaction = new SaveConsumeRawMaterialTransaction();
+            SIDWebTransaction resultTransaction = null;
+            xmlNodeArray inputParameterArray = null;
+            //CIMDataBase database = null;
+            System.out.println("Usage: java -classpath ...JonesPlasticTransactions.SaveConsumeRawMaterialTransaction");
+
+            //<Add Database connection parameter for testing>
+            database = new SIDDataBase("jdbc:mysql://localhost:3306/agrocosa", "root", "entrar123");
+
+            transaction.SetSIDDataBase(database);
+            inputParameterArray = transaction.GenerateTestParameters();
+            if (!transaction.IsValidTransaction()) {
+                System.out.println(" SaveConsumeRawMaterialTransaction contains an invalid transaction type.");
+            } else {
+                if (!transaction.Supports(inputParameterArray)) {
+                    System.out.println(" SaveConsumeRawMaterialTransaction does not support this list of parameters.");
+                } else {
+                    resultTransaction = database.ExecuteTransaction("JonesPlasticTransactions.SaveConsumeRawMaterialTransaction", inputParameterArray);
+                    if (resultTransaction == null) {
+                        System.out.println("The transaction's result array is null.");
+                    } else {
+                        if (resultTransaction.GetError() != null) {
+                            resultTransaction.GetError().print();
+                        } else {
+                            if (resultTransaction.GetResultArray() == null) {
+                                System.out.println("SaveConsumeRawMaterialTransaction - No results were returned.");
+                            } else {
+                                xmlNodeArray array = resultTransaction.GetResultArray();
+                                String str = xmlNodeArray.xmlNodeArray2String(array);
+                                array = xmlNodeArray.string2xmlNodeArray(str);
+                                System.out.println(str);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("SaveConsumeRawMaterialTransaction::main> caught exception " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}

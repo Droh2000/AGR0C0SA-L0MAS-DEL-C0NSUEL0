@@ -1,0 +1,442 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE tiles-definitions PUBLIC
+       "-//Apache Software Foundation//DTD Tiles Configuration 2.1//EN"
+       "http://tiles.apache.org/dtds/tiles-config_2_1.dtd">
+<tiles-definitions>
+
+    <definition name="commonLayout" template="/WEB-INF/templates/commonLayout.jsp">
+        <put-attribute name="header" value="/WEB-INF/tiles/common/header.jsp" />
+        <put-attribute name="left" value="/WEB-INF/tiles/common/left.jsp" />
+        <put-attribute name="right" value="/WEB-INF/tiles/common/right.jsp" />
+        <put-attribute name="footer" value="/WEB-INF/tiles/common/footer.jsp" />
+    </definition>
+    <definition name="emptyLayout" template="/WEB-INF/templates/emptyLayout.jsp">
+    </definition>
+    <definition name="publicLayout" template="/WEB-INF/templates/publicLayout.jsp">
+        <put-attribute name="publicheader" value="/WEB-INF/tiles/common/publicheader.jsp" />
+    </definition>
+    <definition name="login.page" extends="emptyLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/login.jsp" />
+    </definition>
+    <definition name="main.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/main.jsp" />
+    </definition>  
+    <definition name="profile.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/profile.jsp" />
+    </definition>      
+    <definition name="roleManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/roleManagement.jsp" />
+    </definition>  
+    <definition name="userManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/userManagement.jsp" />
+    </definition>  
+    <definition name="configurationManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/configurationManagement.jsp" />
+    </definition>      
+    <definition name="campManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/campManagement.jsp" />
+    </definition>      
+    <definition name="cropTypeManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/cropTypeManagement.jsp" />
+    </definition>      
+    <definition name="cropManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/cropManagement.jsp" />
+    </definition>      
+    <definition name="taskTypeManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/taskTypeManagement.jsp" />
+    </definition>      
+    <definition name="laborTypeManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/laborTypeManagement.jsp" />
+    </definition>      
+    <definition name="bombManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/bombManagement.jsp" />
+    </definition>      
+    <definition name="landTypeManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/landTypeManagement.jsp" />
+    </definition>      
+    <definition name="pipeTypeManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/pipeTypeManagement.jsp" />
+    </definition>      
+    <definition name="campConfiguration.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/campConfiguration.jsp" />
+    </definition>      
+    <definition name="editCamp.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/editCamp.jsp" />
+    </definition>      
+    <definition name="addCampSupervisor.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/addCampSupervisor.jsp" />
+    </definition>      
+    <definition name="addCrop.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/addCrop.jsp" />
+    </definition>      
+    <definition name="newApplicationTask.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/newApplicationTask.jsp" />
+    </definition>      
+    <definition name="newPickingTask.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/newPickingTask.jsp" />
+    </definition>      
+    <definition name="newJournalTask.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/newJournalTask.jsp" />
+    </definition>      
+    <definition name="newIrrigationTask.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/newIrrigationTask.jsp" />
+    </definition>      
+    <definition name="campReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/campReport.jsp" />
+    </definition>      
+    <definition name="taskReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/taskReport.jsp" />
+    </definition>      
+    <definition name="taskHistoryReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/taskHistoryReport.jsp" />
+    </definition>      
+    <definition name="dashboard.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/dashboard.jsp" />
+    </definition>      
+    <definition name="attendTask.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/attendTask.jsp" />
+    </definition>      
+    <definition name="closeTask.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/closeTask.jsp" />
+    </definition>      
+    <definition name="regionManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/regionManagement.jsp" />
+    </definition>      
+    <definition name="engineManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/engineManagement.jsp" />
+    </definition>      
+    <definition name="formulaManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/formulaManagement.jsp" />
+    </definition>      
+    <definition name="addFormula.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/addFormula.jsp" />
+    </definition>      
+    <definition name="newFarmingTask.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/newFarmingTask.jsp" />
+    </definition>      
+    <definition name="fillApplicationInfo.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/fillApplicationInfo.jsp" />
+    </definition>      
+    <definition name="fillAspertionInfo.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/fillAspertionInfo.jsp" />
+    </definition>      
+    <definition name="commentsApplicationInfo.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/commentsApplicationInfo.jsp" />
+    </definition>      
+    <definition name="applicationInfo.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/applicationInfo.jsp" />
+    </definition>      
+    <definition name="aspertionInfo.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/aspertionInfo.jsp" />
+    </definition>      
+    <definition name="commentsFarmingInfo.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/commentsFarmingInfo.jsp" />
+    </definition>      
+    <definition name="commentsPickingInfo.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/commentsPickingInfo.jsp" />
+    </definition>      
+    <definition name="commentsJournalInfo.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/commentsJournalInfo.jsp" />
+    </definition>      
+    <definition name="commentsIrrigationInfo.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/commentsIrrigationInfo.jsp" />
+    </definition>      
+    <definition name="irrigationTypeManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/irrigationTypeManagement.jsp" />
+    </definition>      
+    <definition name="fillIrrigationInfo.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/fillIrrigationInfo.jsp" />
+    </definition>      
+    <definition name="irrigationInfo.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/irrigationInfo.jsp" />
+    </definition>      
+    <definition name="viewTask.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/viewTask.jsp" />
+    </definition>      
+    <definition name="farmingManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/farmingManagement.jsp" />
+    </definition>      
+    <definition name="tractorManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/tractorManagement.jsp" />
+    </definition>      
+    <definition name="toolManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/toolManagement.jsp" />
+    </definition>      
+    <definition name="waterPumpManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/waterPumpManagement.jsp" />
+    </definition>      
+    <definition name="agrochemicalManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/agrochemicalManagement.jsp" />
+    </definition>      
+    <definition name="addAgrochemicalCropType.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/addAgrochemicalCropType.jsp" />
+    </definition>      
+    <definition name="taskFormulaReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/taskFormulaReport.jsp" />
+    </definition>      
+    <definition name="taskJournalReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/taskJournalReport.jsp" />
+    </definition>      
+    <definition name="storageManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/storageManagement.jsp" />
+    </definition>      
+    <definition name="substorageManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/substorageManagement.jsp" />
+    </definition>      
+    <definition name="palletDefinitionManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/palletDefinitionManagement.jsp" />
+    </definition>      
+    <definition name="palletProductManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/palletProductManagement.jsp" />
+    </definition>      
+    <definition name="newPallet.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/newPallet.jsp" />
+    </definition>      
+    <definition name="inventoryReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/inventoryReport.jsp" />
+    </definition>      
+    <definition name="newStockTransferOrder.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/newStockTransferOrder.jsp" />
+    </definition>      
+    <definition name="transportCompanyManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/transportCompanyManagement.jsp" />
+    </definition>      
+    <definition name="releaseStockTransferOrder.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/releaseStockTransferOrder.jsp" />
+    </definition>      
+    <definition name="palletReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/palletReport.jsp" />
+    </definition>      
+    <definition name="stockTransferOrderReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/stockTransferOrderReport.jsp" />
+    </definition>      
+    <definition name="receiptStockTransferOrder.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/receiptStockTransferOrder.jsp" />
+    </definition>      
+    <definition name="customerManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/customerManagement.jsp" />
+    </definition>      
+    <definition name="newShippingOrder.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/newShippingOrder.jsp" />
+    </definition>      
+    <definition name="viewNewShippingOrders.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/viewNewShippingOrders.jsp" />
+    </definition>      
+    <definition name="scanShippingOrder.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/scanShippingOrder.jsp" />
+    </definition>      
+    <definition name="scanShippingOrderMaterial.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/scanShippingOrderMaterial.jsp" />
+    </definition>      
+    <definition name="shippingOrderReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/shippingOrderReport.jsp" />
+    </definition>      
+    <definition name="stockTransferOrderHistoryReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/stockTransferOrderHistoryReport.jsp" />
+    </definition>      
+    <definition name="shippingOrderHistoryReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/shippingOrderHistoryReport.jsp" />
+    </definition>      
+    <definition name="inventoryDetailReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/inventoryDetailReport.jsp" />
+    </definition>      
+    <definition name="categoryManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/categoryManagement.jsp" />
+    </definition>      
+    <definition name="outPallets.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/outPallets.jsp" />
+    </definition>      
+    <definition name="consolidatedPallets.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/consolidatedPallets.jsp" />
+    </definition>      
+    <definition name="pestsManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/pestsManagement.jsp" />
+    </definition>      
+    <definition name="pestReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/pestReport.jsp" />
+    </definition>      
+    <definition name="receiptPicking.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/receiptPicking.jsp" />
+    </definition>      
+    <definition name="binInventoryReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/binInventoryReport.jsp" />
+    </definition>      
+    <definition name="binHistoryReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/binHistoryReport.jsp" />
+    </definition>      
+    <definition name="outBinInventory.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/outBinInventory.jsp" />
+    </definition>      
+    <definition name="brandManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/brandManagement.jsp" />
+    </definition>      
+    <definition name="supplierManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/supplierManagement.jsp" />
+    </definition>      
+    <definition name="rawMaterialTypeManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/rawMaterialTypeManagement.jsp" />
+    </definition>      
+    <definition name="rawMaterialManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/rawMaterialManagement.jsp" />
+    </definition>      
+    <definition name="receiptRawMaterial.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/receiptRawMaterial.jsp" />
+    </definition>      
+    <definition name="consumeRawMaterial.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/consumeRawMaterial.jsp" />
+    </definition>      
+    <definition name="bomManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/bomManagement.jsp" />
+    </definition>      
+    <definition name="addRawMaterialToBom.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/addRawMaterialToBom.jsp" />
+    </definition>      
+    <definition name="uomConversionManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/uomConversionManagement.jsp" />
+    </definition>      
+    <definition name="rawMaterialInventoryReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/rawMaterialInventoryReport.jsp" />
+    </definition>      
+    <definition name="rawMaterialInventoryLogReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/rawMaterialInventoryLogReport.jsp" />
+    </definition>      
+    <definition name="consumeRawMaterialComposed.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/consumeRawMaterialComposed.jsp" />
+    </definition>      
+    <definition name="rawMaterialInventoryCostReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/rawMaterialInventoryCostReport.jsp" />
+    </definition>      
+    <definition name="addAccess.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/addAccess.jsp" />
+    </definition>      
+    <definition name="taskTypeUserManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/taskTypeUserManagement.jsp" />
+    </definition>      
+    <definition name="addTaskTypeUser.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/addTaskTypeUser.jsp" />
+    </definition>      
+    <definition name="sprinklerManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/sprinklerManagement.jsp" />
+    </definition>      
+    <definition name="shippingReport.page" extends="publicLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="publicbody" value="/WEB-INF/tiles/page/shippingReport.jsp" />
+    </definition>      
+    <definition name="deliveryReport.page" extends="publicLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="publicbody" value="/WEB-INF/tiles/page/deliveryReport.jsp" />
+    </definition>      
+    <definition name="shippingHistoryReport.page" extends="publicLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="publicbody" value="/WEB-INF/tiles/page/shippingHistoryReport.jsp" />
+    </definition>  
+    <definition name="deliveryHistoryReport.page" extends="publicLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="publicbody" value="/WEB-INF/tiles/page/deliveryHistoryReport.jsp" />
+    </definition>  
+    <definition name="taskAgrochemicalReport.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/taskAgrochemicalReport.jsp" />
+    </definition>          
+</tiles-definitions>

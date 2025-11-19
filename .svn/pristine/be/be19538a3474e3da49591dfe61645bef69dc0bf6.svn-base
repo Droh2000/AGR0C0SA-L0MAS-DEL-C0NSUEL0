@@ -1,0 +1,411 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package AgrocosaTransactions;
+
+import SIDWebEngine.*;
+import java.sql.*;
+import xmlNodeArray.*;
+
+public class DeleteTaskTransaction extends SIDWebTransaction {
+
+    protected PreparedStatement pstmtDeleteTask;
+    protected PreparedStatement pstmtDeleteTaskSection;
+    protected PreparedStatement pstmtDeleteTaskCrop;
+    protected PreparedStatement pstmtDeleteTaskLabor;
+    protected PreparedStatement pstmtRetrieveTaskHistory;
+    protected PreparedStatement pstmtInsertTaskHistory;
+    protected PreparedStatement pstmtUser;
+
+    /**
+     * Default Constructor
+     *
+     * @exception (none)
+     */
+    public DeleteTaskTransaction() {
+        super();
+        SetTransactionType(SIDWebTransaction.SaveType);
+    }
+
+    /**
+     * Checks to see if the node Array is supported
+     *
+     * @param nodeArray
+     * @return <B>true</B> if the nodeArray is supported. <B>false</B> otherwise
+     * @exception (none)
+     */
+    @Override
+    public boolean Supports(xmlNodeArray nodeArray) {
+
+        //Add tag names as comma separated Strings to the mandatoryTags array
+        String[] mandatoryTags = {
+            "idUser",
+            "idTask"
+        };
+
+        //Add tag names as comma separated Strings to the optionalTags array
+        String[] optionalTags = {};
+        //Add tag names as comma separated Strings to the mandatorySets array
+        String[] mandatorySets = {};
+        //Add tag names as comma separated Strings to the optionalSetTags array
+        String[] optionalSets = {};
+
+        xmlNodeArray errArray = new xmlNodeArray();
+        for (int i = 0; i < mandatoryTags.length; i++) {
+            if (!nodeArray.existValue(mandatoryTags[i])) {
+                System.out.println("<DeleteTaskTransaction::Supports> " + mandatoryTags[i] + " Mandatory tag not found or value is empty/null");
+                errArray.add("ERROR", "MANDATORY_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalTags.length; i++) {
+            if (nodeArray.exist(optionalTags[i]) && !nodeArray.existValue(optionalTags[i])) {
+                System.out.println("<DeleteTaskTransaction::Supports> " + optionalTags[i] + " Optional tag not found or value is empty/null");
+                errArray.add("OPTIONAL_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < mandatorySets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) == null || nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0) {
+                System.out.println("<DeleteTaskTransaction::Supports> " + mandatorySets[i] + " Mandatory Set not found or value is empty/null");
+                errArray.add("MANDATORY_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalSets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) != null && (nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0)) {
+                System.out.println("<DeleteTaskTransaction::Supports> " + optionalSets[i] + " Optional Set not found or value is empty/null");
+                errArray.add("OPTIONAL_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prepares the SQL statements to be executed
+     *
+     * @return <B>true</B> for successful preparation; <B>false</B> for
+     * unsuccessful preparation
+     * @exception (none)
+     */
+    @Override
+    public synchronized boolean PrepareStatements() {
+        //Note1 : Use PreparedStatements instead of Statements where ever possible
+        //Note2 : If transaction contains no prepared statements, delete entire function
+        //        Unless there are nested transaction, then Prepare will call those.
+        try {
+            Connection con = this.GetSIDDataBase().GetConnection();
+
+            pstmtDeleteTask = con.prepareStatement("update task set "
+                    + "idUser = ?, "
+                    + "Status = 'Cancelada', "
+                    + "ModifiedDate = Now() "
+                    + "where idTask = ?");
+
+            pstmtDeleteTaskSection = con.prepareStatement("update tasksection set "
+                    + "Active = 0, "
+                    + "idUser = ?, "
+                    + "ModifiedDate = Now() "
+                    + "where idTask = ? ");
+
+            pstmtDeleteTaskCrop = con.prepareStatement("update taskcrop set "
+                    + "Active = 0, "
+                    + "idUser = ?, "
+                    + "ModifiedDate = Now() "
+                    + "where idTask = ? ");
+
+            pstmtDeleteTaskLabor = con.prepareStatement("update tasklabor set "
+                    + "Active = 0, "
+                    + "idUser = ?, "
+                    + "ModifiedDate = Now() "
+                    + "where idTask = ? ");
+
+            pstmtRetrieveTaskHistory = con.prepareStatement("SELECT "
+                    + "task.idTask, "
+                    + "task.TaskType, "
+                    + "taskhistory.CampName, "
+                    + "taskhistory.SectionName, "
+                    + "taskhistory.LaborTypeName, "
+                    + "taskhistory.SectionCrop, "
+                    + "date_format(task.TaskDate,'%d/%m/%Y') as TaskDate, "
+                    + "task.Pressure, "
+                    + "task.Formula, "
+                    + "task.Comments, "
+                    + "task.Status, "
+                    + "date_format(task.InsertDate,'%d/%m/%Y %h:%i') as InsertDate, "
+                    + "task.Manager, "
+                    + "task.WorkersQty, "
+                    + "task.Temperature, "
+                    + "taskhistory.User, "
+                    + "taskhistory.SupervisorName "
+                    + "FROM taskhistory inner join "
+                    + "task on task.idTask = taskhistory.idTask "
+                    + "Where taskhistory.idTask = ? "
+                    + "and taskhistory.Status = 'Nueva' "
+                    + "Order by task.InsertDate");
+
+            pstmtInsertTaskHistory = con.prepareStatement("insert into taskhistory ( "
+                    + "idTask, "
+                    + "TaskType, "
+                    + "CampName, "
+                    + "SectionName, "
+                    + "LaborTypeName, "
+                    + "SectionCrop, "
+                    + "TaskDate, "
+                    + "Status, "
+                    + "Comments, "
+                    + "User, "
+                    + "InsertDate, "
+                    + "SupervisorName "
+                    + ") values( "
+                    + "?, "//1 idTask
+                    + "?, "//2 TaskTYpe
+                    + "?, " //3 CAmpName
+                    + "?, " //4 SectionName
+                    + "?, " //5 LaborTypeName
+                    + "?, " //6 SectionCrop
+                    + "STR_TO_DATE(?,'%d/%m/%Y'), " //7 TaskDate
+                    + "?, "//8 Status
+                    + "?, "//8 Comments
+                    + "?, "//10 User
+                    + "Now(), "
+                    + "? " //11 Supervisor Name
+                    + ")");
+
+            pstmtUser = con.prepareStatement("select concat(FirstName,' ',LastName) User "
+                    + "from user "
+                    + "where idUser = ? ");
+
+            this.addPreparedStatement(pstmtDeleteTask);
+            this.addPreparedStatement(pstmtDeleteTaskSection);
+            this.addPreparedStatement(pstmtDeleteTaskCrop);
+            this.addPreparedStatement(pstmtDeleteTaskLabor);
+            this.addPreparedStatement(pstmtInsertTaskHistory);
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("DeleteTaskTransaction::PrepareStatements> SQLException: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * executes sql statements using input arguments and returns result
+     *
+     * @return valid node array if successful else null
+     * @exception SQLException if sql error occurs
+     * @exception Exception if non sql error occurs
+     */
+    @Override
+    public synchronized xmlNodeArray Execute() throws SQLException, Exception {
+        Connection conn = null;
+        xmlNodeArray resultArray = null;
+        ResultSet rset = null;
+        int rowsAffected = 0;
+        int idUser = 0;
+        int idTask = 0;
+        boolean boolSaveHistory = false;
+        String taskType = "";
+        String camp = "";
+        String selectedSection = "";
+        String selectedLabor = "";
+        String selectedCrop = "";
+        String taskDate = "";
+        String comments = "";
+        String userName = "";
+        String supervisorName = "";
+
+        try {
+
+            conn = this.GetSIDDataBase().GetConnection();
+            conn.setAutoCommit(false);
+            resultArray = new xmlNodeArray();
+
+            idUser = GetNodeArray().find("idUser").getIntValue();
+            idTask = GetNodeArray().find("idTask").getIntValue();
+            taskType = GetNodeArray().find("taskType").getStringValue();
+
+            pstmtRetrieveTaskHistory.setInt(1, idTask);
+            rset = pstmtRetrieveTaskHistory.executeQuery();
+            while (rset.next()) {
+                camp = rset.getString("CampName");
+                selectedSection = rset.getString("SectionName");
+                selectedLabor = rset.getString("LaborTypeName");
+                selectedCrop = rset.getString("SectionCrop");
+                taskDate = rset.getString("TaskDate");
+                comments = "Tarea Cancelada";
+                supervisorName = rset.getString("SupervisorName");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            pstmtUser.setInt(1, idUser);
+            rset = pstmtUser.executeQuery();
+            if (rset.next()) {
+                userName = rset.getString("User");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            //delete taskcrop
+            pstmtDeleteTaskCrop.setInt(1, idUser);
+            pstmtDeleteTaskCrop.setInt(2, idTask);
+            pstmtDeleteTaskCrop.executeUpdate();
+
+            //delete tasklabor
+            pstmtDeleteTaskLabor.setInt(1, idUser);
+            pstmtDeleteTaskLabor.setInt(2, idTask);
+            pstmtDeleteTaskLabor.executeUpdate();
+
+            //delete tasksection
+            pstmtDeleteTaskSection.setInt(1, idUser);
+            pstmtDeleteTaskSection.setInt(2, idTask);
+            pstmtDeleteTaskSection.executeUpdate();
+
+            //delete task
+            pstmtDeleteTask.setInt(1, idUser);
+            pstmtDeleteTask.setInt(2, idTask);
+            rowsAffected = pstmtDeleteTask.executeUpdate();
+            if (rowsAffected > 0) {
+                boolSaveHistory = true;
+            } else {
+                conn.rollback();
+                resultArray.add("error", "La tarea no pudo ser cancelada.");
+                resultArray.add("RESPONSE_CODE", "FAIL");
+                resultArray.add("RESPONSE_MESSAGE", "La tarea no pudo ser cancelada.");
+                resultArray.add("RESPONSE_DETAIL", "");
+            }
+
+            if (boolSaveHistory) {
+                pstmtInsertTaskHistory.setInt(1, idTask);
+                pstmtInsertTaskHistory.setString(2, taskType);
+                pstmtInsertTaskHistory.setString(3, camp);
+                pstmtInsertTaskHistory.setString(4, selectedSection);
+                pstmtInsertTaskHistory.setString(5, selectedLabor);
+                pstmtInsertTaskHistory.setString(6, selectedCrop);
+                pstmtInsertTaskHistory.setString(7, taskDate);
+                pstmtInsertTaskHistory.setString(8, "Cancelada");
+                pstmtInsertTaskHistory.setString(9, comments);
+                pstmtInsertTaskHistory.setString(10, userName);
+                pstmtInsertTaskHistory.setString(11, supervisorName);
+                rowsAffected = pstmtInsertTaskHistory.executeUpdate();
+
+                if (rowsAffected > 0) {
+                    conn.commit();
+                    resultArray.add("RESPONSE_CODE", "PASS");
+                    resultArray.add("RESPONSE_MESSAGE", "La tarea ha sido cancelada exitosamente.");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                } else {
+                    conn.rollback();
+                    resultArray.add("error", "La tarea no pudo ser cancelada.");
+                    resultArray.add("RESPONSE_CODE", "FAIL");
+                    resultArray.add("RESPONSE_MESSAGE", "La tarea no pudo ser cancelada.");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                }
+
+            }
+
+            return resultArray;
+        } catch (SQLException e) {
+            conn.rollback();
+            System.out.println("DeleteTaskTransaction::Execute> SQLException: " + e.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "SQLException:" + e.getMessage());
+            resultArray.add("RESPONSE_DETAIL", e.getMessage());
+            return resultArray;
+        } catch (Exception ex) {
+            conn.rollback();
+            System.out.println("DeleteTaskTransaction::Execute> Exception: " + ex.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "Exception:" + ex.getMessage());
+            resultArray.add("RESPONSE_DETAIL", ex.getMessage());
+            return resultArray;
+        } finally {
+            CloseStatements();
+//            System.out.println("<DeleteTaskTransaction::Execute> exit");
+        }
+    }
+
+    /**
+     * Generates an xmlNodeArray containing parameters for this transaction
+     *
+     * @return xmlNodeArray that contains parameters for the transaction
+     * @exception (none)
+     */
+    @Override
+    public xmlNodeArray GenerateTestParameters() {
+        xmlNodeArray nodeArr = new xmlNodeArray();
+        nodeArr.add("TRANSACTION_CLASS_TO_EXECUTE", "JonesPlasticTransactions.DeleteTaskTransaction");
+
+        return nodeArr;
+
+    }
+
+    /**
+     * The main method for the transaction. Creates a database connection and an
+     * error Array, then executes the transaction and reports any errors
+     *
+     * @param argv argv[0] is an optional configuration file name
+     * @exception (none)
+     */
+    public static void main(String[] argv) {
+        try {
+            DeleteTaskTransaction transaction = new DeleteTaskTransaction();
+            SIDWebTransaction resultTransaction = null;
+            xmlNodeArray inputParameterArray = null;
+            //CIMDataBase database = null;
+            System.out.println("Usage: java -classpath ...JonesPlasticTransactions.DeleteTaskTransaction");
+
+            //<Add Database connection parameter for testing>
+            database = new SIDDataBase("jdbc:mysql://www.sidchihuahua.com:3306/zodiac", "zodiac_admin", "Z0d14c#4");
+
+            transaction.SetSIDDataBase(database);
+            inputParameterArray = transaction.GenerateTestParameters();
+            if (!transaction.IsValidTransaction()) {
+                System.out.println(" DeleteTaskTransaction contains an invalid transaction type.");
+            } else {
+                if (!transaction.Supports(inputParameterArray)) {
+                    System.out.println(" DeleteTaskTransaction does not support this list of parameters.");
+                } else {
+                    resultTransaction = database.ExecuteTransaction("JonesPlasticTransactions.DeleteTaskTransaction", inputParameterArray);
+                    if (resultTransaction == null) {
+                        System.out.println("The transaction's result array is null.");
+                    } else {
+                        if (resultTransaction.GetError() != null) {
+                            resultTransaction.GetError().print();
+                        } else {
+                            if (resultTransaction.GetResultArray() == null) {
+                                System.out.println("DeleteTaskTransaction - No results were returned.");
+                            } else {
+                                xmlNodeArray array = resultTransaction.GetResultArray();
+                                String str = xmlNodeArray.xmlNodeArray2String(array);
+                                array = xmlNodeArray.string2xmlNodeArray(str);
+                                System.out.println(str);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("DeleteTaskTransaction::main> caught exception " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}

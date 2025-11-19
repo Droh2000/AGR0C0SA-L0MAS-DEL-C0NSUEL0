@@ -1,0 +1,591 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package AgrocosaTransactions;
+
+import SIDWebEngine.*;
+import java.sql.*;
+import xmlNodeArray.*;
+
+public class SaveNewStockTransferOrderTransaction extends SIDWebTransaction {
+
+    protected PreparedStatement pstmtInsertStockTransferOrder;
+    protected PreparedStatement pstmtInsertStockTransferOrderDetail;
+    protected PreparedStatement pstmtInsertStockTransferOrderHistory;
+    protected PreparedStatement pstmtPalletInfo;
+    protected PreparedStatement pstmtUser;
+    protected PreparedStatement pstmtInsertInventoryMovement;
+    protected PreparedStatement pstmtInsertInventory;
+
+    /**
+     * Default Constructor
+     *
+     * @exception (none)
+     */
+    public SaveNewStockTransferOrderTransaction() {
+        super();
+        SetTransactionType(SIDWebTransaction.SaveType);
+    }
+
+    /**
+     * Checks to see if the node Array is supported
+     *
+     * @param nodeArray
+     * @return <B>true</B> if the nodeArray is supported. <B>false</B> otherwise
+     * @exception (none)
+     */
+    @Override
+    public boolean Supports(xmlNodeArray nodeArray) {
+
+        //Add tag names as comma separated Strings to the mandatoryTags array
+        String[] mandatoryTags = {
+            "idUser",
+            "transportCompanyName",
+            "truckBoxNumber",
+            "truckBoxPlate",
+            "truckPlate",
+            "truckDriverName",
+            "palletInfo"
+        };
+
+        //Add tag names as comma separated Strings to the optionalTags array
+        String[] optionalTags = {};
+        //Add tag names as comma separated Strings to the mandatorySets array
+        String[] mandatorySets = {};
+        //Add tag names as comma separated Strings to the optionalSetTags array
+        String[] optionalSets = {};
+
+        xmlNodeArray errArray = new xmlNodeArray();
+        for (int i = 0; i < mandatoryTags.length; i++) {
+            if (!nodeArray.existValue(mandatoryTags[i])) {
+                System.out.println("<SaveNewStockTransferOrderTransaction::Supports> " + mandatoryTags[i] + " Mandatory tag not found or value is empty/null");
+                errArray.add("ERROR", "MANDATORY_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalTags.length; i++) {
+            if (nodeArray.exist(optionalTags[i]) && !nodeArray.existValue(optionalTags[i])) {
+                System.out.println("<SaveNewStockTransferOrderTransaction::Supports> " + optionalTags[i] + " Optional tag not found or value is empty/null");
+                errArray.add("OPTIONAL_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < mandatorySets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) == null || nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0) {
+                System.out.println("<SaveNewStockTransferOrderTransaction::Supports> " + mandatorySets[i] + " Mandatory Set not found or value is empty/null");
+                errArray.add("MANDATORY_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalSets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) != null && (nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0)) {
+                System.out.println("<SaveNewStockTransferOrderTransaction::Supports> " + optionalSets[i] + " Optional Set not found or value is empty/null");
+                errArray.add("OPTIONAL_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prepares the SQL statements to be executed
+     *
+     * @return <B>true</B> for successful preparation; <B>false</B> for
+     * unsuccessful preparation
+     * @exception (none)
+     */
+    @Override
+    public synchronized boolean PrepareStatements() {
+        //Note1 : Use PreparedStatements instead of Statements where ever possible
+        //Note2 : If transaction contains no prepared statements, delete entire function
+        //        Unless there are nested transaction, then Prepare will call those.
+        try {
+            Connection con = this.GetSIDDataBase().GetConnection();
+
+            pstmtInsertStockTransferOrder = con.prepareStatement("insert into stocktransferorder ( "
+                    + "TransportCompany, "
+                    + "TruckDriverName, "
+                    + "TruckPlate, "
+                    + "Proforma, "
+                    + "Status, "
+                    + "idUser, "
+                    + "InsertDate, "
+                    + "ModifiedDate, "
+                    + "Active, "
+                    + "TruckBoxNumber, "
+                    + "TruckBoxPlate, "
+                    + "TruckBoxCleaning, "
+                    + "MaintenanceConditions, "
+                    + "OpenWindows, "
+                    + "SealedPallets, "
+                    + "PestFree, "
+                    + "SmellStrangeFree, "
+                    + "Label "
+                    + ") values("
+                    + "?, " //1 TransportCompany
+                    + "?, " //2 TruckDriverName
+                    + "?, " //3 TruckPlate
+                    + "?, " //4 Proforma
+                    + "'Nueva', " //Status
+                    + "?, " //5 idUser
+                    + "Now(), " // InsertDate
+                    + "Now(), " // ModifiedDate
+                    + "1, " // Active
+                    + "?, " //6 TruckBoxNumber
+                    + "?, " //7 TruckBoxPlate
+                    + "?, " //8 TruckBoxCleaning
+                    + "?, " //9 MaintenanceConditions
+                    + "?, " //10 OpenWindows
+                    + "?, " //11 SealedPallets
+                    + "?, " //12 PestFree
+                    + "?, " //13 SmellStrangeFree 
+                    + "?  " //14 Label
+                    + ")", Statement.RETURN_GENERATED_KEYS);
+
+            pstmtInsertStockTransferOrderDetail = con.prepareStatement("insert into stocktransferorderdetail ("
+                    + "idStockTransferOrder, "
+                    + "PalletId, "
+                    + "ProductName, "
+                    + "Size, "
+                    + "Color, "
+                    + "Quantity "
+                    + ") values("
+                    + "?, "//1 idStockTransferOrder
+                    + "?, "//2 PalletId
+                    + "?, "//3 ProductName
+                    + "?, "//4 Size
+                    + "?, "//5 Color,
+                    + "?  "//6 Quantity
+                    + ")");
+
+            pstmtInsertStockTransferOrderHistory = con.prepareStatement("insert into stocktransferorderhistory ("
+                    + "idStockTransferOrder, "
+                    + "Proforma, "
+                    + "Process, "
+                    + "MovementType, "
+                    + "Quantity, "
+                    + "Comments, "
+                    + "User, "
+                    + "InsertDate, "
+                    + "Active "
+                    + ") values("
+                    + "?, "//1 idStockTransferOrder
+                    + "?, "//2 Proforma
+                    + "?, "//3 Process
+                    + "?, "//4 MovementType
+                    + "?, "//5 Quantity
+                    + "?, "//6 Comments
+                    + "?, "//7 User
+                    + "Now(), "
+                    + "1 "
+                    + ")");
+
+            pstmtPalletInfo = con.prepareStatement("select "
+                    + "PalletId, "
+                    + "ProductName, "
+                    + "Size, "
+                    + "Color, "
+                    + "Quantity "
+                    + "from palletinfo "
+                    + "where PalletId = ? ");
+
+            pstmtUser = con.prepareStatement("select concat(FirstName,' ',LastName) User "
+                    + "from user "
+                    + "where idUser = ? ");
+
+            pstmtInsertInventoryMovement = con.prepareStatement("insert into inventorymovement ("
+                    + "PalletId, "
+                    + "Process, "
+                    + "MovementType, "
+                    + "ProductName, "
+                    + "Size, "
+                    + "Color, "
+                    + "Quantity, "
+                    + "StorageNameOut, "
+                    + "SubstorageNameOut, "
+                    + "StorageNameIn, "
+                    + "SubstorageNameIn, "
+                    + "Comments, "
+                    + "User, "
+                    + "InsertDate, "
+                    + "Active "
+                    + ") values("
+                    + "?, "//1 PalletId
+                    + "?, "//2 Process
+                    + "?, "//3 MovementType
+                    + "?, "//4 ProductName
+                    + "?, "//5 Size
+                    + "?, "//6 Color
+                    + "?, "//7 Quantity
+                    + "?, "//8 StorageNameOut
+                    + "?, "//9 SubstorageNameOut
+                    + "?, "//10 StorageNameIn
+                    + "?, "//11 SubstorageNameIn
+                    + "?, "//12 Comment
+                    + "?, "//13 User
+                    + "Now(), "
+                    + "1 "
+                    + ")");
+
+            pstmtInsertInventory = con.prepareStatement("SELECT "
+                    + "storage.StorageName, "
+                    + "substorage.SubstorageName "
+                    + "FROM inventory inner join "
+                    + "storage on storage.idStorage = inventory.idStorage inner join "
+                    + "substorage on substorage.idSubstorage = inventory.idSubstorage "
+                    + "Where inventory.PalletId = ?");
+
+            this.addPreparedStatement(pstmtInsertStockTransferOrder);
+            this.addPreparedStatement(pstmtInsertStockTransferOrderDetail);
+            this.addPreparedStatement(pstmtInsertStockTransferOrderHistory);
+            this.addPreparedStatement(pstmtPalletInfo);
+            this.addPreparedStatement(pstmtUser);
+            this.addPreparedStatement(pstmtInsertInventoryMovement);
+            this.addPreparedStatement(pstmtInsertInventory);
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("SaveNewStockTransferOrderTransaction::PrepareStatements> SQLException: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * executes sql statements using input arguments and returns result
+     *
+     * @return valid node array if successful else null
+     * @exception SQLException if sql error occurs
+     * @exception Exception if non sql error occurs
+     */
+    @Override
+    public synchronized xmlNodeArray Execute() throws SQLException, Exception {
+        Connection conn = null;
+        xmlNodeArray resultArray = null;
+        ResultSet rset = null;
+        int rowsAffected = 0;
+        int idUser = 0;
+        String userName = "";
+        String transportCompanyName = "";
+        String truckDriverName = "";
+        String truckPlate = "";
+        String palletInfo = "";
+        String productName = "";
+        String size = "";
+        String color = "";
+        int quantity = 0;
+        String palletId = "";
+        String result = "";
+        int idStockTransferOrder = 0;
+        boolean saveDetail = false;
+        int palletQty = 0;
+        String storageName = null;
+        String substorageName = null;
+        String truckBoxNumber = "";
+        String truckBoxPlate = "";
+        String truckBoxCleaning = null;
+        String maintenanceConditions = null;
+        String openWindows = null;
+        String sealedPallets = null;
+        String pestFree = null;
+        String smellStrangeFree = null;
+        String label = null;
+        String validPalletInfo = "";
+
+        try {
+
+            conn = this.GetSIDDataBase().GetConnection();
+            conn.setAutoCommit(false);
+            resultArray = new xmlNodeArray();
+
+            idUser = GetNodeArray().find("idUser").getIntValue();
+            transportCompanyName = GetNodeArray().find("transportCompanyName").getStringValue();
+            truckBoxNumber = GetNodeArray().find("truckBoxNumber").getStringValue();
+            truckBoxPlate = GetNodeArray().find("truckBoxPlate").getStringValue();
+            truckPlate = GetNodeArray().find("truckPlate").getStringValue();
+            truckDriverName = GetNodeArray().find("truckDriverName").getStringValue();
+            palletInfo = GetNodeArray().find("palletInfo").getStringValue();
+
+            String lines[] = palletInfo.split("\\r?\\n");
+            palletQty = lines.length;
+
+            if (this.GetNodeArray().existValue("truckBoxCleaning")) {
+                truckBoxCleaning = GetNodeArray().find("truckBoxCleaning").getStringValue();
+            }
+            if (this.GetNodeArray().existValue("maintenanceConditions")) {
+                maintenanceConditions = GetNodeArray().find("maintenanceConditions").getStringValue();
+            }
+            if (this.GetNodeArray().existValue("openWindows")) {
+                openWindows = GetNodeArray().find("openWindows").getStringValue();
+            }
+            if (this.GetNodeArray().existValue("sealedPallets")) {
+                sealedPallets = GetNodeArray().find("sealedPallets").getStringValue();
+            }
+            if (this.GetNodeArray().existValue("pestFree")) {
+                pestFree = GetNodeArray().find("pestFree").getStringValue();
+            }
+            if (this.GetNodeArray().existValue("smellStrangeFree")) {
+                smellStrangeFree = GetNodeArray().find("smellStrangeFree").getStringValue();
+            }
+            if (this.GetNodeArray().existValue("label")) {
+                label = GetNodeArray().find("label").getStringValue();
+            }
+
+            //User Name
+            pstmtUser.setInt(1, idUser);
+            rset = pstmtUser.executeQuery();
+            if (rset.next()) {
+                userName = rset.getString("User");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            //validate if pallet id exist in palletinfo table 
+            for (int i = 0; i < lines.length; i++) {
+                palletId = lines[i].trim();
+                pstmtPalletInfo.setString(1, palletId);
+                rset = pstmtPalletInfo.executeQuery();
+                if (rset.next()) {
+                    validPalletInfo += "1";
+                } else {
+                    validPalletInfo += "0";
+                }
+                if (rset != null) {
+                    rset.close();
+                    rset = null;
+                }
+            }
+
+            if (validPalletInfo.contains("0")) {
+                conn.rollback();
+                resultArray.add("error", "Pallet ID invalido.");
+                resultArray.add("RESPONSE_CODE", "FAIL");
+                resultArray.add("RESPONSE_MESSAGE", "Alguno de los Pallet ID es invalido. Por favor verifiquelo.");
+                resultArray.add("RESPONSE_DETAIL", "");
+                return resultArray;
+            }
+
+            //insert stocktransferorder
+            pstmtInsertStockTransferOrder.setString(1, transportCompanyName);
+            pstmtInsertStockTransferOrder.setString(2, truckDriverName);
+            pstmtInsertStockTransferOrder.setString(3, truckPlate);
+            pstmtInsertStockTransferOrder.setString(4, null);
+            pstmtInsertStockTransferOrder.setInt(5, idUser);
+            pstmtInsertStockTransferOrder.setString(6, truckBoxNumber);
+            pstmtInsertStockTransferOrder.setString(7, truckBoxPlate);
+            pstmtInsertStockTransferOrder.setString(8, truckBoxCleaning);
+            pstmtInsertStockTransferOrder.setString(9, maintenanceConditions);
+            pstmtInsertStockTransferOrder.setString(10, openWindows);
+            pstmtInsertStockTransferOrder.setString(11, sealedPallets);
+            pstmtInsertStockTransferOrder.setString(12, pestFree);
+            pstmtInsertStockTransferOrder.setString(13, smellStrangeFree);
+            pstmtInsertStockTransferOrder.setString(14, label);
+
+            rowsAffected = pstmtInsertStockTransferOrder.executeUpdate();
+            if (rowsAffected > 0) {
+                rset = pstmtInsertStockTransferOrder.getGeneratedKeys();
+                if (rset.next()) {
+                    idStockTransferOrder = rset.getInt(1);
+                }
+                if (rset != null) {
+                    rset.close();
+                    rset = null;
+                }
+                saveDetail = true;
+            }
+
+            if (saveDetail) {
+                //Insert
+                for (int i = 0; i < lines.length; i++) {
+                    palletId = lines[i].trim();
+                    //get productName Size, color & quantity
+                    pstmtPalletInfo.setString(1, palletId);
+                    rset = pstmtPalletInfo.executeQuery();
+                    if (rset.next()) {
+                        productName = rset.getString("ProductName");
+                        size = rset.getString("Size");
+                        color = rset.getString("Color");
+                        quantity = rset.getInt("Quantity");
+                    }
+                    if (rset != null) {
+                        rset.close();
+                        rset = null;
+                    }
+
+                    //get storage * substorage
+                    pstmtInsertInventory.setString(1, palletId);
+                    rset = pstmtInsertInventory.executeQuery();
+                    if (rset.next()) {
+                        storageName = rset.getString("StorageName");
+                        substorageName = rset.getString("SubstorageName");
+                    }
+                    if (rset != null) {
+                        rset.close();
+                        rset = null;
+                    }
+
+                    //Insert stocktransferorderdetail
+                    pstmtInsertStockTransferOrderDetail.setInt(1, idStockTransferOrder);
+                    pstmtInsertStockTransferOrderDetail.setString(2, palletId);
+                    pstmtInsertStockTransferOrderDetail.setString(3, productName);
+                    pstmtInsertStockTransferOrderDetail.setString(4, size);
+                    pstmtInsertStockTransferOrderDetail.setString(5, color);
+                    pstmtInsertStockTransferOrderDetail.setInt(6, quantity);
+                    rowsAffected = pstmtInsertStockTransferOrderDetail.executeUpdate();
+                    if (rowsAffected > 0) {
+                        //Insert pallet Movement
+                        pstmtInsertInventoryMovement.setString(1, palletId);
+                        pstmtInsertInventoryMovement.setString(2, "Embarque");
+                        pstmtInsertInventoryMovement.setString(3, "Salida");
+                        pstmtInsertInventoryMovement.setString(4, productName);
+                        pstmtInsertInventoryMovement.setString(5, size);
+                        pstmtInsertInventoryMovement.setString(6, color);
+                        pstmtInsertInventoryMovement.setInt(7, quantity);
+                        pstmtInsertInventoryMovement.setString(8, null);
+                        pstmtInsertInventoryMovement.setString(9, null);
+                        pstmtInsertInventoryMovement.setString(10, storageName);
+                        pstmtInsertInventoryMovement.setString(11, substorageName);
+                        pstmtInsertInventoryMovement.setString(12, transportCompanyName + ", " + truckDriverName + ", " + truckPlate);
+                        pstmtInsertInventoryMovement.setString(13, userName);
+                        rowsAffected = pstmtInsertInventoryMovement.executeUpdate();
+
+                        if (rowsAffected > 0) {
+                            result += "1";
+                        } else {
+                            result += "0";
+                        }
+                    } else {
+                        result += "0";
+                    }
+                }
+            }
+
+            if (!result.contains("0")) {
+                //Insert stocktransferorderhistory
+                pstmtInsertStockTransferOrderHistory.setInt(1, idStockTransferOrder);
+                pstmtInsertStockTransferOrderHistory.setString(2, null);
+                pstmtInsertStockTransferOrderHistory.setString(3, "Embarque");
+                pstmtInsertStockTransferOrderHistory.setString(4, "Nueva");
+                pstmtInsertStockTransferOrderHistory.setInt(5, palletQty);
+                pstmtInsertStockTransferOrderHistory.setString(6, transportCompanyName + ", " + truckDriverName + ", " + truckPlate);
+                pstmtInsertStockTransferOrderHistory.setString(7, userName);
+                rowsAffected = pstmtInsertStockTransferOrderHistory.executeUpdate();
+                if (rowsAffected > 0) {
+                    conn.commit();
+                    resultArray.add("RESPONSE_CODE", "PASS");
+                    resultArray.add("RESPONSE_MESSAGE", "Embarque registrado exitosamente.");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                } else {
+                    conn.rollback();
+                    resultArray.add("error", "El Embarque no pudo ser registrado.");
+                    resultArray.add("RESPONSE_CODE", "FAIL");
+                    resultArray.add("RESPONSE_MESSAGE", "El pallet no pudo ser registrado.");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                }
+            } else {
+                conn.rollback();
+                resultArray.add("error", "El Embarque no pudo ser registrado.");
+                resultArray.add("RESPONSE_CODE", "FAIL");
+                resultArray.add("RESPONSE_MESSAGE", "El pallet no pudo ser registrado.");
+                resultArray.add("RESPONSE_DETAIL", "");
+            }
+
+            return resultArray;
+        } catch (SQLException e) {
+            conn.rollback();
+            System.out.println("SaveNewStockTransferOrderTransaction::Execute> SQLException: " + e.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "SQLException:" + e.getMessage());
+            resultArray.add("RESPONSE_DETAIL", e.getMessage());
+            return resultArray;
+        } catch (Exception ex) {
+            conn.rollback();
+            System.out.println("SaveNewStockTransferOrderTransaction::Execute> Exception: " + ex.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "Exception:" + ex.getMessage());
+            resultArray.add("RESPONSE_DETAIL", ex.getMessage());
+            return resultArray;
+        } finally {
+            CloseStatements();
+        }
+    }
+
+    /**
+     * Generates an xmlNodeArray containing parameters for this transaction
+     *
+     * @return xmlNodeArray that contains parameters for the transaction
+     * @exception (none)
+     */
+    @Override
+    public xmlNodeArray GenerateTestParameters() {
+        xmlNodeArray nodeArr = new xmlNodeArray();
+        nodeArr.add("TRANSACTION_CLASS_TO_EXECUTE", "JonesPlasticTransactions.SaveNewStockTransferOrderTransaction");
+
+        return nodeArr;
+
+    }
+
+    /**
+     * The main method for the transaction. Creates a database connection and an
+     * error Array, then executes the transaction and reports any errors
+     *
+     * @param argv argv[0] is an optional configuration file name
+     * @exception (none)
+     */
+    public static void main(String[] argv) {
+        try {
+            SaveNewStockTransferOrderTransaction transaction = new SaveNewStockTransferOrderTransaction();
+            SIDWebTransaction resultTransaction = null;
+            xmlNodeArray inputParameterArray = null;
+            //CIMDataBase database = null;
+            System.out.println("Usage: java -classpath ...JonesPlasticTransactions.SaveNewStockTransferOrderTransaction");
+
+            //<Add Database connection parameter for testing>
+            database = new SIDDataBase("jdbc:mysql://localhost:3306/agrocosa", "root", "entrar123");
+
+            transaction.SetSIDDataBase(database);
+            inputParameterArray = transaction.GenerateTestParameters();
+            if (!transaction.IsValidTransaction()) {
+                System.out.println(" SaveNewStockTransferOrderTransaction contains an invalid transaction type.");
+            } else {
+                if (!transaction.Supports(inputParameterArray)) {
+                    System.out.println(" SaveNewStockTransferOrderTransaction does not support this list of parameters.");
+                } else {
+                    resultTransaction = database.ExecuteTransaction("JonesPlasticTransactions.SaveNewStockTransferOrderTransaction", inputParameterArray);
+                    if (resultTransaction == null) {
+                        System.out.println("The transaction's result array is null.");
+                    } else {
+                        if (resultTransaction.GetError() != null) {
+                            resultTransaction.GetError().print();
+                        } else {
+                            if (resultTransaction.GetResultArray() == null) {
+                                System.out.println("SaveNewStockTransferOrderTransaction - No results were returned.");
+                            } else {
+                                xmlNodeArray array = resultTransaction.GetResultArray();
+                                String str = xmlNodeArray.xmlNodeArray2String(array);
+                                array = xmlNodeArray.string2xmlNodeArray(str);
+                                System.out.println(str);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("SaveNewStockTransferOrderTransaction::main> caught exception " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}

@@ -1,0 +1,119 @@
+package Agrocosa;
+
+import SIDWebEngine.SIDServlet;
+import java.io.IOException;
+import javax.servlet.*;
+import javax.servlet.http.*;
+import xmlNodeArray.xmlNodeArray;
+
+public class ConsolidateWarehousePalletsServlet extends SIDServlet {
+
+    String inventoryTxn = "AgrocosaTransactions.RetrieveWarehousePalletsTableTransaction";
+    String saveTxn = "AgrocosaTransactions.SaveConsolidateWarehousePalletsTransaction";
+    String savePalletTxn = "AgrocosaTransactions.SaveDividedPalletsTransaction";
+
+    @Override
+    protected void processRequest(HttpServletRequest request,
+            HttpServletResponse response,
+            xmlNodeArray nodeArray) {
+        RequestDispatcher rd = null;
+        HttpSession session = null;
+        xmlNodeArray callTxnNA = null;
+        xmlNodeArray txnNA = null;
+
+        try {
+            session = request.getSession();
+            callTxnNA = new xmlNodeArray();
+
+
+            callTxnNA.add("idUser", session.getAttribute("idUser").toString());
+            callTxnNA.add("TRANSACTION_CLASS_TO_EXECUTE", inventoryTxn);
+            callTxnNA.append(nodeArray);
+            txnNA = executeTransaction(callTxnNA);
+
+            if (txnNA != null) {
+                txnNA.remove("RESPONSE_CODE");
+                txnNA.remove("RESPONSE_MESSAGE");
+                txnNA.remove("RESPONSE_DETAIL");
+                request = this.parseTxnResponse(request, txnNA);
+            }
+
+           
+            //save
+            if (nodeArray != null) {
+                if (nodeArray.getSize() > 0
+                        && nodeArray.exist("Action")
+                        && !nodeArray.find("Action").isValueEmpty()
+                        && nodeArray.find("Action").getStringValue().equals("Save")
+                        && nodeArray.exist("tableData")
+                        && !nodeArray.find("tableData").isValueEmpty()) {
+                    callTxnNA.find("TRANSACTION_CLASS_TO_EXECUTE").setValue(saveTxn);
+
+                    txnNA = executeTransaction(callTxnNA);
+                    if (txnNA != null) {
+                        
+                        request = this.parseTxnResponse(request, txnNA);
+                        
+                        
+                        callTxnNA.find("TRANSACTION_CLASS_TO_EXECUTE").setValue(inventoryTxn);
+                        txnNA = executeTransaction(callTxnNA);
+                        if (txnNA != null) {
+                            txnNA.remove("RESPONSE_CODE");
+                            txnNA.remove("RESPONSE_MESSAGE");
+                            txnNA.remove("RESPONSE_DETAIL");
+                            request = this.parseTxnResponse(request, txnNA);
+                        }
+                        
+                    }
+                }
+            }
+
+            //save divided pallet
+            if (nodeArray != null) {
+                if (nodeArray.getSize() > 0
+                        && nodeArray.exist("Action")
+                        && !nodeArray.find("Action").isValueEmpty()
+                        && nodeArray.find("Action").getStringValue().equals("SavePallet")) {
+                    callTxnNA.find("TRANSACTION_CLASS_TO_EXECUTE").setValue(savePalletTxn);
+
+                    txnNA = executeTransaction(callTxnNA);
+                    if (txnNA != null) {
+                        
+                        request = this.parseTxnResponse(request, txnNA);
+                        
+                        
+                        callTxnNA.find("TRANSACTION_CLASS_TO_EXECUTE").setValue(inventoryTxn);
+                        txnNA = executeTransaction(callTxnNA);
+                        if (txnNA != null) {
+                            txnNA.remove("RESPONSE_CODE");
+                            txnNA.remove("RESPONSE_MESSAGE");
+                            txnNA.remove("RESPONSE_DETAIL");
+                            request = this.parseTxnResponse(request, txnNA);
+                        }
+                        
+                    }
+                }
+            }
+
+            rd = request.getRequestDispatcher("/consolidateWarehousePallets.page");
+
+            rd.forward(request, response);
+            
+
+        } catch (IOException ioe) {
+            if (session != null) {
+                session.setAttribute("error",
+                        "IO_EXCEPTION_ERROR" + ". " + "<" + this.getClass().getName()
+                        + ": processRequest> IOException: "
+                        + ioe.getMessage());
+            }
+        } catch (ServletException se) {
+            if (session != null) {
+                session.setAttribute("error",
+                        "SERVLET_EXCEPTION_ERROR" + ". " + "<" + this.getClass().getName()
+                        + ": processRequest> ServletException: "
+                        + se.getMessage());
+            }
+        }
+    }
+}

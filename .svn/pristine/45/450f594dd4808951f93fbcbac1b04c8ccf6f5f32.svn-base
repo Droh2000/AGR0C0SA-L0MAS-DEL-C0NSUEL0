@@ -1,0 +1,451 @@
+<%@ taglib uri="http://displaytag.sf.net" prefix="display"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
+<script src="../plugins/REDIPS_drag/redips-drag-min.min.js" type="text/javascript"></script>
+<script src="../plugins/REDIPS_drag/redips-drag-source.js" type="text/javascript"></script>
+
+
+
+<script src="../plugins/contextmenu/jquery.contextMenu.js"></script>
+<script src="../plugins/contextmenu/jquery.ui.position.min.js"></script>
+<link rel="stylesheet" href="../plugins/contextmenu/jquery.contextMenu.min.css">
+
+<style>
+    #main_container {
+        margin: auto;
+        width: 100%;
+    }
+
+    /* drag objects (DIV inside table cells) */
+    .redips-drag {
+        cursor: move;
+        margin: auto;
+        margin-bottom: 5px;
+        background-color: white;
+        text-align: center;
+        font-size: 9pt; /* needed for cloned object */
+        width: 100px;
+        min-width: 100px;
+        height: 35px;
+        line-height: 35px;
+        /* round corners */
+        border-radius: 4px; /* Opera, Chrome */
+        -moz-border-radius: 4px; /* FF */
+    }
+
+    /* define main container (lime) */
+    div#redips-drag {
+        /*border: 1px solid lime;*/
+        width: 100%;
+        height: 100%;
+        padding: 10px;
+        display: flex;
+    }
+    /* table styles */
+    div#redips-drag table {
+        background-color: #fff;
+        border-collapse: collapse;
+        margin: 10px;
+    }
+
+    /* right table container (blue) */
+    #right {
+        /*width: 100%;*/
+        overflow: auto;
+        position: relative;
+    }
+
+    /* left table cells */
+    #table1 td {
+        border: 1px #AEB6BF solid;
+        vertical-align: top;
+        text-align: center;
+        font-size: 9pt;
+    }
+
+    /* right table cells */
+    #table2 td {
+        border: 1px #AEB6BF solid;
+        height: 50px;
+        width: 100px;
+        min-width: 100px;
+        vertical-align: top;
+        text-align: center;
+        font-size: 9pt;
+        padding: 2px;
+    }
+
+    /* green objects */
+    .green {
+        border: 2px solid #499B33;
+    }
+
+    .gray {
+        border: 2px solid #499B33;
+        background-color: #f7f7f7;
+    }
+
+    .red {
+        border: 2px solid #FF0000;
+        background-color: #f7f7f7;
+    }
+    .yellow {
+        border: 2px solid #FF8000;
+        background-color: #f7f7f7;
+    }
+
+    /* set height for right container TD (contains DIV elements) */
+    .rightContainer {
+        padding-top: 7px;
+        vertical-align: top;
+        height: 270px;
+    }
+
+    .redips-mark {
+        color: black;
+        background-color: #ecf0f5;
+        font-weight: bold;
+    }
+
+    .dock{
+        font-family: Arial, Helvetica,sans-serif;
+        font-size: 12px;
+        font-weight: bold;
+        background-color: #ecf0f5;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .flex {
+        display: flex;
+        flex-direction: row;
+    }
+
+</style>
+
+
+<script type="text/javascript">
+
+    $(function () {
+
+
+
+        $('#saveButton').on("click", function () {
+            var rd = REDIPS.drag;
+            var tableContent = rd.saveContent('table2', 'json');
+
+            $("#tableData").val(tableContent);
+            $('#saveModal').modal('show');
+        });
+
+
+        $('#createPallet').on("click", function () {
+
+            var maxField = $("#palletQuantity").val();
+            var x = 1;
+            if (maxField !== "") {
+                while (x <= maxField) {
+
+                    var html = "<div class=\"form-group\">"
+                            + "<label># Sacos Pallet " + x + "</label>"
+                            + "<input name=\"q" + x + "\" type=\"text\" class=\"form-control\" required/>"
+                            + "</div>"
+
+                    x++; //Increment field counter
+
+                    $("#palletInfo").append(html); //Add field html
+                }
+            }
+
+        });
+
+        $.contextMenu({
+            selector: '.context-menu-one',
+            callback: function (key, options) {
+                //clear
+                $("#linea").val("");
+                $("#product").val("");
+                $("#referenceNumber").val("");
+                $("#quantity").val("");
+
+                $("#palletQuantity").val("");
+                $("#palletInfo").empty();
+
+                //get data
+                var line = options.$trigger.attr('id');
+                line = line.substring(0, line.indexOf("-"));
+                var info = options.$trigger.text().split("-");
+
+                //set data
+                $("#linea").val(line);
+                $("#product").val(info[1]);
+                $("#referenceNumber").val(info[2]);
+                $("#quantity").val(info[0]);
+                $('#palletModal').modal('show');
+            },
+            items: {
+                "edit": {name: "Edit", icon: "edit"},
+                "sep1": "---------",
+                "quit": {name: "Quit", icon: function () {
+                        return 'context-menu-icon context-menu-icon-quit';
+                    }}
+            }
+        });
+
+
+    });
+
+
+
+</script>
+
+<div class="" >
+    <div style="content-wrapper">
+        <section class="content-header">
+            <h1>
+                Consolidar Pallets
+                <small>Acomodar pallets</small>
+            </h1>
+        </section>
+
+        <!-- Main content -->
+        <section class="content">
+
+            <c:choose>
+                <c:when test="${requestScope.RESPONSE_CODE == 'PASS'}">                    
+                    <c:if test="${requestScope.RESPONSE_MESSAGE ne 'OK'}">
+
+
+                        <div class="alert alert-success alert-dismissable">
+                            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                            <h4>	<i class="icon fa fa-check"></i> OK</h4>
+                            <c:out value="${requestScope.RESPONSE_MESSAGE}" /><br />
+                            <c:out value="${requestScope.RESPONSE_DETAIL}" />
+                        </div>
+                    </c:if>
+                </c:when>
+                <c:when test="${requestScope.RESPONSE_CODE == 'FAIL'}">
+                    <div class="alert alert-danger alert-dismissable">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                        <h4><i class="icon fa fa-ban"></i> Error !</h4>
+                        <c:out value="${requestScope.RESPONSE_MESSAGE}" /><br />
+                        <c:out value="${requestScope.RESPONSE_DETAIL}" />
+                    </div>
+
+                </c:when>
+            </c:choose>
+
+            <div class="box box-success">
+                <div class="box-header with-border">
+                    <h3 class="box-title">Bodega</h3>
+                </div>
+                <div class="box-body box-profile">
+
+                    <div id="main_container">
+
+
+                        <div id="redips-drag" >
+
+                            <!-- right container -->
+                            <div id="right">
+                                <!-- table2 -->
+                                <table id="table2">
+                                    <colgroup>  
+                                        <c:forEach items="${Line_Table}" var="row" varStatus="status">
+                                            <col width="100"/>
+                                        </c:forEach>
+                                    </colgroup>
+                                    <tr>
+                                        <c:forEach items="${Line_Table}" var="row" varStatus="status">
+                                            <td class="redips-mark">${row.Line}</td>
+                                        </c:forEach>
+                                    </tr>
+                                    <tbody>
+                                        <tr>
+                                            <c:forEach items="${Inventory_Table}" var="row" varStatus="status">
+                                                <td>
+                                                    ${row.TableValue}
+                                                </td>
+                                            </c:forEach>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="7" class="redips-mark" style="background-color: #fff;">&nbsp;</td>
+                                            <td colspan="3" class="redips-mark dock">DOCK #1</td>
+                                            <td colspan="2" class="redips-mark" style="background-color: #fff;">&nbsp;</td>
+                                            <td colspan="3" class="redips-mark dock">RAMP #2</td>
+                                            <td colspan="2" class="redips-mark" style="background-color: #fff;">&nbsp;</td>
+                                            <td colspan="3" class="redips-mark dock">DOCK #3</td>
+                                            <td colspan="2" class="redips-mark" style="background-color: #fff;">&nbsp;</td>
+                                            <td colspan="3" class="redips-mark dock">DOCK #4</td>
+                                            <td colspan="2" class="redips-mark" style="background-color: #fff;">&nbsp;</td>
+                                            <td colspan="3" class="redips-mark dock">DOCK #5</td>
+                                            <td colspan="2" class="redips-mark" style="background-color: #fff;">&nbsp;</td>
+                                            <td colspan="3" class="redips-mark dock">DOCK #6</td>
+                                            <td colspan="2" class="redips-mark" style="background-color: #fff;">&nbsp;</td>
+                                            <td colspan="3" class="redips-mark dock">DOCK #7</td>
+                                            <td colspan="2" class="redips-mark" style="background-color: #fff;">&nbsp;</td>
+                                            <td colspan="3" class="redips-mark dock">DOCK #8</td>
+                                            <td colspan="2" class="redips-mark" style="background-color: #fff;">&nbsp;</td>
+                                            <td colspan="3" class="redips-mark dock">RAMP #9</td>
+                                            <td colspan="2" class="redips-mark" style="background-color: #fff;">&nbsp;</td>
+                                            <td colspan="3" class="redips-mark dock">DOCK #10</td>
+                                            <td colspan="6" class="redips-mark" style="background-color: #fff;">&nbsp;</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div><!-- /.box-body -->
+                <div class="box-footer text-center">
+                    <button type="button" id="saveButton" class="btn btn-primary"><i class="fa fa-save"></i> Guardar</button>
+                    <input type="hidden" name="Action" value="Save"/> 
+                </div>
+            </div>
+
+
+            <script>
+
+                // create container needed for methods below
+                var redips = {};
+
+                // initialization
+                redips.init = function () {
+                    // reference to the REDIPS.drag library
+                    var rd = REDIPS.drag;
+                    // initialization
+                    rd.init();
+                    // dragged elements can be placed to the empty cells only
+                    //rd.dropMode = 'single';
+                    // set hover color
+                    rd.hover.colorTd = '#9BB3DA';
+                    // when DIV element is double clicked return it to the left table
+                    /* rd.event.dblClicked = function () {
+                     var id = rd.obj.id, // set dblclicked DIV id
+                     pos = rd.getPosition(); // get element position
+                     // move element if source position is second (right) table
+                     if (pos[0] === 1) {
+                     // move DIV element to the left table
+                     rd.moveObject({
+                     id: id, // DIV element id
+                     target: [0, 1, 0] // target position (first table, second row, first cell)
+                     });
+                     }
+                     }; */
+                }
+
+                // add onload event listener
+                if (window.addEventListener) {
+                    window.addEventListener('load', redips.init, false);
+                }
+                else if (window.attachEvent) {
+                    window.attachEvent('onload', redips.init);
+                }
+            </script>
+
+
+            <div class="modal fade" id="saveModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" data-backdrop="static" data-keyboard="false">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <form name="formSave" action="consolidateWarehousePallets.do" method="post">
+                            <div class="modal-header alert-success">
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                <h4 class="modal-title" id="myModalLabel"><i class="icon fa fa-save"></i> Guardar Consolidacion de Pallets</h4>
+                            </div>
+                            <div class="modal-body">
+                                <p><h3>Esta usted seguro de guardar los cambios ?</h3></p>
+                                <input type="hidden" name="tableData" id="tableData" value=""/>
+                                <input type="hidden" name="Action" id="Action" value="Save"/>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-primary pull-left" data-dismiss="modal">Cancelar</button>
+                                <button type="submit" id="btnConfirmYes" class="btn btn-primary pull-right">Guardar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <div class="modal fade" id="palletModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" data-backdrop="static" data-keyboard="false">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <form name="formSaveDividedPallet" action="consolidateWarehousePallets.do" method="post">
+                            <div class="modal-header alert-success">
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                <h4 class="modal-title" id="myModalLabel"><i class="icon fa fa-cubes"></i> Dividir Pallets</h4>
+                            </div>
+                            <div class="modal-body">
+
+                                <div class="form-group">
+                                    <label>Linea</label>                                                
+                                    <input name="linea" type="text" class="form-control" id="linea" value="" readonly/>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Producto</label>                                                
+                                    <input name="product" type="text" class="form-control" id="product" value="" readonly/>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Proforma</label>                                                
+                                    <input name="referenceNumber" type="text" class="form-control" id="referenceNumber" value="" readonly/>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Pallets</label>                                                
+                                    <input name="quantity" type="text" class="form-control" id="quantity" value="" readonly/>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Cantidad de Pallets a Crear</label>                                 
+                                </div>
+
+
+                                <div class="flex">
+                                    <div>
+                                        <button type="button" class="btn btn-primary btn-flat" id="createPallet">Crear</button>
+                                    </div>
+                                    <div>
+                                        <div class="input-group">
+                                            <input name="palletQuantity" type="text" class="form-control" id="palletQuantity" value="" required/>                                            
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="palletInfo">
+
+                                </div>
+                                <br>
+                                <br>
+                                <input type="hidden" name="Action" id="Action" value="SavePallet"/>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-primary pull-left" data-dismiss="modal">Cancelar</button>
+                                <button type="submit" id="btnConfirmYes" class="btn btn-primary pull-right">Guardar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <c:if test="false">
+                <c:forEach items='${requestScope}' var='p'>
+                    <ul>
+                        <%-- Display the key of the current item, which
+                             represents the parameter name --%>
+                        <li>Parameter Name: <c:out value='${p.key}'/></li>
+
+                        <%-- Display the value of the current item, which
+                             represents the parameter value --%>
+                        <li>Parameter Value: <c:out value='${p.value}'/></li>
+                    </ul>
+                </c:forEach>
+            </c:if>
+        </section><!-- /.content -->
+    </div><!-- /.content-wrapper -->
+</div>

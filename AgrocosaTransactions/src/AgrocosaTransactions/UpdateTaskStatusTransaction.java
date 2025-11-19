@@ -1,0 +1,769 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package AgrocosaTransactions;
+
+import SIDWebEngine.*;
+import java.sql.*;
+import xmlNodeArray.*;
+
+public class UpdateTaskStatusTransaction extends SIDWebTransaction {
+
+    protected PreparedStatement pstmtUpdateTask;
+    protected PreparedStatement pstmtRetrieveTaskHistory;
+    protected PreparedStatement pstmtInsertTaskHistory;
+    protected PreparedStatement pstmtUser;
+    protected PreparedStatement pstmtTaskProduct;
+    protected PreparedStatement pstmtUpdateFarmingTask;
+    protected PreparedStatement pstmtUpdateJournalTask;
+    protected PreparedStatement pstmtInsertApplicationTask;
+    protected PreparedStatement pstmtTaskTypeUser;
+    protected PreparedStatement pstmtCampInfo;
+    protected PreparedStatement pstmtCampSection;
+    protected PreparedStatement pstmtInsertTaskSection;
+    protected PreparedStatement pstmtInsertNewTaskHistory;
+    protected PreparedStatement pstmtUpdateIrrigationTask;
+    protected PreparedStatement pstmtSelectIdUser;
+    protected PreparedStatement pstmtSelectTaskFormula;
+    protected PreparedStatement pstmtSelectTaskProduct;
+    protected PreparedStatement pstmtUpdateTaskFormula;
+    protected PreparedStatement pstmtUpdateTaskProduct;
+
+    /**
+     * Default Constructor
+     *
+     * @exception (none)
+     */
+    public UpdateTaskStatusTransaction() {
+        super();
+        SetTransactionType(SIDWebTransaction.SaveType);
+    }
+
+    /**
+     * Checks to see if the node Array is supported
+     *
+     * @param nodeArray
+     * @return <B>true</B> if the nodeArray is supported. <B>false</B> otherwise
+     * @exception (none)
+     */
+    @Override
+    public boolean Supports(xmlNodeArray nodeArray) {
+
+        //Add tag names as comma separated Strings to the mandatoryTags array
+        String[] mandatoryTags = {
+            "idUser",
+            "idTask",
+            "status"
+        };
+
+        //Add tag names as comma separated Strings to the optionalTags array
+        String[] optionalTags = {};
+        //Add tag names as comma separated Strings to the mandatorySets array
+        String[] mandatorySets = {};
+        //Add tag names as comma separated Strings to the optionalSetTags array
+        String[] optionalSets = {};
+
+        xmlNodeArray errArray = new xmlNodeArray();
+        for (int i = 0; i < mandatoryTags.length; i++) {
+            if (!nodeArray.existValue(mandatoryTags[i])) {
+                System.out.println("<UpdateTaskStatusTransaction::Supports> " + mandatoryTags[i] + " Mandatory tag not found or value is empty/null");
+                errArray.add("ERROR", "MANDATORY_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalTags.length; i++) {
+            if (nodeArray.exist(optionalTags[i]) && !nodeArray.existValue(optionalTags[i])) {
+                System.out.println("<UpdateTaskStatusTransaction::Supports> " + optionalTags[i] + " Optional tag not found or value is empty/null");
+                errArray.add("OPTIONAL_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < mandatorySets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) == null || nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0) {
+                System.out.println("<UpdateTaskStatusTransaction::Supports> " + mandatorySets[i] + " Mandatory Set not found or value is empty/null");
+                errArray.add("MANDATORY_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalSets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) != null && (nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0)) {
+                System.out.println("<UpdateTaskStatusTransaction::Supports> " + optionalSets[i] + " Optional Set not found or value is empty/null");
+                errArray.add("OPTIONAL_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prepares the SQL statements to be executed
+     *
+     * @return <B>true</B> for successful preparation; <B>false</B> for
+     * unsuccessful preparation
+     * @exception (none)
+     */
+    @Override
+    public synchronized boolean PrepareStatements() {
+        //Note1 : Use PreparedStatements instead of Statements where ever possible
+        //Note2 : If transaction contains no prepared statements, delete entire function
+        //        Unless there are nested transaction, then Prepare will call those.
+        try {
+            Connection con = this.GetSIDDataBase().GetConnection();
+
+            pstmtUpdateTask = con.prepareStatement("update task set "
+                    + "idUser = ?, "
+                    + "Status = ?, "
+                    + "ModifiedDate = Now(), "
+                    + "reinforcement = ? "
+                    + "where idTask = ?");
+
+            pstmtRetrieveTaskHistory = con.prepareStatement("SELECT "
+                    + "task.idTask, "
+                    + "task.TaskType, "
+                    + "taskhistory.CampName, "
+                    + "taskhistory.SectionName, "
+                    + "taskhistory.LaborTypeName, "
+                    + "taskhistory.SectionCrop, "
+                    + "date_format(task.TaskDate,'%d/%m/%Y') as TaskDate, "
+                    + "task.Pressure, "
+                    + "task.Formula, "
+                    + "task.Comments, "
+                    + "task.Status, "
+                    + "date_format(task.InsertDate,'%d/%m/%Y %h:%i') as InsertDate, "
+                    + "task.Manager, "
+                    + "task.WorkersQty, "
+                    + "task.Temperature, "
+                    + "taskhistory.User, "
+                    + "taskhistory.SupervisorName "
+                    + "FROM taskhistory inner join "
+                    + "task on task.idTask = taskhistory.idTask "
+                    + "Where taskhistory.idTask = ? "
+                    + "and taskhistory.Status = 'Nueva' "
+                    + "Order by task.InsertDate");
+
+            pstmtInsertTaskHistory = con.prepareStatement("insert into taskhistory ( "
+                    + "idTask, "
+                    + "TaskType, "
+                    + "CampName, "
+                    + "SectionName, "
+                    + "LaborTypeName, "
+                    + "SectionCrop, "
+                    + "TaskDate, "
+                    + "Status, "
+                    + "Comments, "
+                    + "User, "
+                    + "InsertDate, "
+                    + "SupervisorName "
+                    + ") values( "
+                    + "?, "//1 idTask
+                    + "?, "//2 TaskTYpe
+                    + "?, " //3 CAmpName
+                    + "?, " //4 SectionName
+                    + "?, " //5 LaborTypeName
+                    + "?, " //6 SectionCrop
+                    + "STR_TO_DATE(?,'%d/%m/%Y'), " //7 TaskDate
+                    + "?, "//8 Status
+                    + "?, "//8 Comments
+                    + "?, "//10 User
+                    + "Now(), "
+                    + "? " //11 Supervisor Name
+                    + ")");
+
+            pstmtUser = con.prepareStatement("select concat(FirstName,' ',LastName) User "
+                    + "from user "
+                    + "where idUser = ? ");
+
+            pstmtTaskProduct = con.prepareStatement("select * "
+                    + "from taskproduct "
+                    + "where idTask = ? "
+                    + "and Active  = 1");
+
+            pstmtUpdateFarmingTask = con.prepareStatement("update task set "
+                    + "Tractor = ?, "
+                    + "Tool = ?, "
+                    + "Operator = ? "
+                    + "Where idTask = ? ");
+
+            pstmtUpdateJournalTask = con.prepareStatement("update task set "
+                    + "Manager = ?, "
+                    + "WorkersQty = ? "
+                    + "Where idTask = ? ");
+
+            pstmtInsertApplicationTask = con.prepareStatement("Insert into task ( "
+                    + "TaskType, "
+                    + "idCamp, "
+                    + "TaskDate, "
+                    + "Comments, "
+                    + "Status, "
+                    + "idUser, "
+                    + "InsertDate, "
+                    + "ModifiedDate, "
+                    + "Active, "
+                    + "idSupervisor "
+                    + ")Values( "
+                    + "'Aplicacion Foliar', " //Task Type
+                    + "?, " //1 idCamp
+                    + "STR_TO_DATE(?,'%d/%m/%Y'), " //2 TaskDate
+                    + "?, "//3 Comments
+                    + "'Nueva', "// Status
+                    + "?, "//4 idUser
+                    + "Now(), " //  InsertDate
+                    + "Now(), " //  ModifiedDate
+                    + "1, " //  Active                    
+                    + "? "// 5 dSupervisor
+                    + ")", Statement.RETURN_GENERATED_KEYS);
+
+            pstmtTaskTypeUser = con.prepareStatement("select "
+                    + "coalesce(tasktypeuser.idUser,0) as idUser, "
+                    + "concat(user.FirstName,' ',user.LastName) User "
+                    + "from tasktypeuser inner join "
+                    + "tasktype on tasktype.idTaskType = tasktypeuser.idTaskType inner join "
+                    + "user on user.idUser = tasktypeuser.idUser "
+                    + "Where tasktype.Active = 1 "
+                    + "and tasktype.TaskTypeName = ?");
+
+            pstmtCampInfo = con.prepareStatement("select camp.idCamp "
+                    + "from campinfo inner join "
+                    + "camp on camp.idCamp = campinfo.idCamp "
+                    + "where camp.CampName = ? "
+                    + "and camp.Active = 1 "
+                    + "and campinfo.Active = 1");
+
+            pstmtCampSection = con.prepareStatement("SELECT * "
+                    + "FROM tasksection "
+                    + "Where idTask = ? "
+                    + "Order by idTaskSection");
+
+            pstmtInsertTaskSection = con.prepareStatement("insert into tasksection ( "
+                    + "idTask, "
+                    + "SectionName, "
+                    + "Area, "
+                    + "LandTypeName, "
+                    + "PipeType, "
+                    + "idUser, "
+                    + "InsertDate, "
+                    + "ModifiedDate, "
+                    + "Active "
+                    + ")Values( "
+                    + "?, "//1 idTask
+                    + "?, "//2 SectionNAme
+                    + "?, "//3 Area
+                    + "?, "//4 LandType
+                    + "?, "//5 PipeType
+                    + "?, "//6 idUser
+                    + "Now(), "
+                    + "Now(), "
+                    + "1 "
+                    + ")");
+
+            pstmtInsertNewTaskHistory = con.prepareStatement("insert into taskhistory ( "
+                    + "idTask, "
+                    + "TaskType, "
+                    + "CampName, "
+                    + "SectionName, "
+                    + "LaborTypeName, "
+                    + "SectionCrop, "
+                    + "TaskDate, "
+                    + "Status, "
+                    + "Comments, "
+                    + "User, "
+                    + "InsertDate, "
+                    + "SupervisorName "
+                    + ") values( "
+                    + "?, "//1 idTask
+                    + "?, "//2 TaskTYpe
+                    + "?, " //3 CAmpName
+                    + "?, " //4 SectionName
+                    + "?, " //5 LaborTypeName
+                    + "?, " //6 SectionCrop
+                    + "STR_TO_DATE(?,'%d/%m/%Y'), " //7 TaskDate
+                    + "?, "//8 Status
+                    + "?, "//8 Comments
+                    + "?, "//10 User
+                    + "Now(), "
+                    + "?  " //11 Supervisor Name
+                    + ")");
+
+            pstmtUpdateIrrigationTask = con.prepareStatement("update task set "
+                    + "idSupervisor = ? "
+                    + "Where idTask = ? ");
+
+            pstmtSelectIdUser = con.prepareStatement("select idUser "
+                    + "from user "
+                    + "where  concat(FirstName,' ',LastName) = ? "
+                    + "and Active = 1");
+
+            pstmtSelectTaskFormula = con.prepareStatement("SELECT "
+                    + "idTaskLabor, "
+                    + "LaborTypeName "
+                    + "FROM tasklabor "
+                    + "where idTask = ? "
+                    + "and Active = 1 "
+                    + "Order by idTaskLabor");
+
+            pstmtSelectTaskProduct = con.prepareStatement("SELECT "
+                    + "idTaskProduct, "
+                    + "AgrochemicalName, "
+                    + "Brand, "
+                    + "ActiveIngredient, "
+                    + "MinDose, "
+                    + "MaxDose, "
+                    + "UOM, "
+                    + "AgrochemicalType, "
+                    + "SecurityInterval, "
+                    + "DelayPeriod, "
+                    + "Lote, "
+                    + "Caducity "
+                    + "FROM taskproduct "
+                    + "where idTask = ? "
+                    + "Order by idTaskProduct");
+
+            pstmtUpdateTaskFormula = con.prepareStatement("update tasklabor set "
+                    + "RealUse = ? "
+                    + "where idTaskLabor = ? ");
+
+            pstmtUpdateTaskProduct = con.prepareStatement("update taskproduct set "
+                    + "RealUse = ? "
+                    + "where idTaskProduct = ? ");
+
+            this.addPreparedStatement(pstmtUpdateTask);
+            this.addPreparedStatement(pstmtRetrieveTaskHistory);
+            this.addPreparedStatement(pstmtInsertTaskHistory);
+            this.addPreparedStatement(pstmtUser);
+            this.addPreparedStatement(pstmtTaskProduct);
+            this.addPreparedStatement(pstmtUpdateFarmingTask);
+            this.addPreparedStatement(pstmtUpdateJournalTask);
+            this.addPreparedStatement(pstmtInsertApplicationTask);
+            this.addPreparedStatement(pstmtTaskTypeUser);
+            this.addPreparedStatement(pstmtCampInfo);
+            this.addPreparedStatement(pstmtCampSection);
+            this.addPreparedStatement(pstmtInsertTaskSection);
+            this.addPreparedStatement(pstmtInsertNewTaskHistory);
+            this.addPreparedStatement(pstmtUpdateIrrigationTask);
+            this.addPreparedStatement(pstmtSelectIdUser);
+            this.addPreparedStatement(pstmtSelectTaskFormula);
+            this.addPreparedStatement(pstmtSelectTaskProduct);
+            this.addPreparedStatement(pstmtUpdateTaskFormula);
+            this.addPreparedStatement(pstmtUpdateTaskProduct);
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("UpdateTaskStatusTransaction::PrepareStatements> SQLException: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * executes sql statements using input arguments and returns result
+     *
+     * @return valid node array if successful else null
+     * @exception SQLException if sql error occurs
+     * @exception Exception if non sql error occurs
+     */
+    @Override
+    public synchronized xmlNodeArray Execute() throws SQLException, Exception {
+        Connection conn = null;
+        xmlNodeArray resultArray = null;
+        ResultSet rset = null;
+        int rowsAffected = 0;
+        int idUser = 0;
+        int idTask = 0;
+        boolean boolSaveHistory = false;
+        String taskType = "";
+        String camp = "";
+        String selectedSection = "";
+        String selectedLabor = "";
+        String selectedCrop = "";
+        String taskDate = "";
+        String comments = "";
+        String userName = "";
+        String supervisorName = "";
+        String status = "";
+        String reinforcement = "No";
+        String reinforcementDate = "";
+        int idSupervisor = 0;
+        int idCamp = 0;
+        boolean boolSaveSection = false;
+        int newIdTask = 0;
+        String section = "";
+        String area = "";
+        String landType = "";
+        String pipeType = "";
+        boolean boolSaveHistoryNewTask = false;
+        String bombSupervisor = "";
+        int idBombSupervisor = 0;
+
+        try {
+
+            conn = this.GetSIDDataBase().GetConnection();
+            conn.setAutoCommit(false);
+            resultArray = new xmlNodeArray();
+
+            idUser = GetNodeArray().find("idUser").getIntValue();
+            idTask = GetNodeArray().find("idTask").getIntValue();
+            status = GetNodeArray().find("status").getStringValue();
+
+            pstmtRetrieveTaskHistory.setInt(1, idTask);
+            rset = pstmtRetrieveTaskHistory.executeQuery();
+            if (rset.next()) {
+                taskType = rset.getString("TaskType");
+                camp = rset.getString("CampName");
+                selectedSection = rset.getString("SectionName");
+                selectedLabor = rset.getString("LaborTypeName");
+                selectedCrop = rset.getString("SectionCrop");
+                taskDate = rset.getString("TaskDate");
+                comments = "Tarea " + status;
+                supervisorName = rset.getString("SupervisorName");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            pstmtUser.setInt(1, idUser);
+            rset = pstmtUser.executeQuery();
+            if (rset.next()) {
+                userName = rset.getString("User");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            //task type user 
+            pstmtTaskTypeUser.setString(1, taskType);
+            rset = pstmtTaskTypeUser.executeQuery();
+            if (rset.next()) {
+                idSupervisor = rset.getInt("idUser");
+                supervisorName = rset.getString("User");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            //validate
+            if (idSupervisor <= 0) {
+                conn.rollback();
+                resultArray.add("error", "La tarea no tiene asignada un supervisor.");
+                resultArray.add("RESPONSE_CODE", "FAIL");
+                resultArray.add("RESPONSE_MESSAGE", "Por favor asigne un supervisor a esta tarea.");
+                resultArray.add("RESPONSE_DETAIL", "");
+                return resultArray;
+            }
+
+            //camp info
+            pstmtCampInfo.setString(1, camp);
+            rset = pstmtCampInfo.executeQuery();
+            if (rset.next()) {
+                idCamp = rset.getInt("idCamp");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            //validate fields
+            if (this.GetNodeArray().existValue("reinforcement")) {
+                reinforcement = GetNodeArray().find("reinforcement").getStringValue();
+                comments += " - Refuerzo:" + reinforcement;
+            }
+
+            //update task
+            pstmtUpdateTask.setInt(1, idUser);
+            pstmtUpdateTask.setString(2, status);
+            pstmtUpdateTask.setString(3, reinforcement);
+            pstmtUpdateTask.setInt(4, idTask);
+            rowsAffected = pstmtUpdateTask.executeUpdate();
+            if (rowsAffected > 0) {
+                boolSaveHistory = true;
+
+                //create new task
+                if (reinforcement.equals("Si")) {
+                    if (this.GetNodeArray().existValue("reinforcementDate")) {
+                        reinforcementDate = GetNodeArray().find("reinforcementDate").getStringValue();
+
+                        pstmtInsertApplicationTask.setInt(1, idCamp);
+                        pstmtInsertApplicationTask.setString(2, reinforcementDate);
+                        pstmtInsertApplicationTask.setString(3, "Refuerzo de tarea numero: " + idTask);
+                        pstmtInsertApplicationTask.setInt(4, idUser);
+                        pstmtInsertApplicationTask.setInt(5, idSupervisor);
+                        rowsAffected = pstmtInsertApplicationTask.executeUpdate();
+                        if (rowsAffected > 0) {
+                            rset = pstmtInsertApplicationTask.getGeneratedKeys();
+                            if (rset.next()) {
+                                newIdTask = rset.getInt(1);
+                            }
+                            if (rset != null) {
+                                rset.close();
+                                rset = null;
+                            }
+                            boolSaveSection = true;
+                            boolSaveHistoryNewTask = true;
+                        }
+
+                    }
+                }
+
+            } else {
+                conn.rollback();
+                resultArray.add("error", "La tarea no pudo ser actualziada.");
+                resultArray.add("RESPONSE_CODE", "FAIL");
+                resultArray.add("RESPONSE_MESSAGE", "La tarea no pudo ser actualizada.");
+                resultArray.add("RESPONSE_DETAIL", "");
+            }
+
+            //Real Use Fertilizer
+            if (taskType.equals("Riego")) {
+                if (this.GetNodeArray().existValue("realUse")
+                        && GetNodeArray().find("realUse").getStringValue().equals("Yes")) {
+
+                    //Task Formula
+                    pstmtSelectTaskFormula.setInt(1, idTask);
+                    rset = pstmtSelectTaskFormula.executeQuery();
+                    while (rset.next()) {
+                        if (this.GetNodeArray().exist("f" + rset.getString("idTaskLabor"))) {
+                            //update real use
+                            pstmtUpdateTaskFormula.setString(1, this.GetNodeArray().find("f" + rset.getString("idTaskLabor")).getStringValue());
+                            pstmtUpdateTaskFormula.setInt(2, rset.getInt("idTaskLabor"));
+                            pstmtUpdateTaskFormula.executeUpdate();
+                        }
+                    }
+                    if (rset != null) {
+                        rset.close();
+                        rset = null;
+                    }
+
+                    //Task Product
+                    pstmtSelectTaskProduct.setInt(1, idTask);
+                    rset = pstmtSelectTaskProduct.executeQuery();
+                    while (rset.next()) {
+                        if (this.GetNodeArray().exist("p" + rset.getString("idTaskProduct"))) {
+                            //update real use
+                            pstmtUpdateTaskProduct.setString(1, this.GetNodeArray().find("p" + rset.getString("idTaskProduct")).getStringValue());
+                            pstmtUpdateTaskProduct.setInt(2, rset.getInt("idTaskProduct"));
+                            pstmtUpdateTaskProduct.executeUpdate();
+                        }
+                    }
+                    if (rset != null) {
+                        rset.close();
+                        rset = null;
+                    }
+
+                }
+                if (this.GetNodeArray().existValue("bombSupervisor")) {
+                    bombSupervisor = GetNodeArray().find("bombSupervisor").getStringValue();
+                    supervisorName = bombSupervisor;
+                    pstmtSelectIdUser.setString(1, bombSupervisor);
+                    rset = pstmtSelectIdUser.executeQuery();
+                    if (rset.next()) {
+                        idBombSupervisor = rset.getInt("idUser");
+                    }
+                    if (rset != null) {
+                        rset.close();
+                        rset = null;
+                    }
+
+                    pstmtUpdateIrrigationTask.setInt(1, idBombSupervisor);
+                    pstmtUpdateIrrigationTask.setInt(2, idTask);
+                    pstmtUpdateIrrigationTask.executeUpdate();
+
+                }
+            }
+
+            //Labranza
+            if (taskType.equals("Labranza")) {
+                if (this.GetNodeArray().existValue("operator4Update")
+                        && this.GetNodeArray().existValue("tractor4Update")
+                        && this.GetNodeArray().existValue("tool4Update")) {
+
+                    pstmtUpdateFarmingTask.setString(1, this.GetNodeArray().find("operator4Update").getStringValue());
+                    pstmtUpdateFarmingTask.setString(2, this.GetNodeArray().find("tractor4Update").getStringValue());
+                    pstmtUpdateFarmingTask.setString(3, this.GetNodeArray().find("tool4Update").getStringValue());
+                    pstmtUpdateFarmingTask.setInt(4, idTask);
+                    pstmtUpdateFarmingTask.executeUpdate();
+                }
+            }
+
+            //Jornal
+            if (taskType.equals("Jornal")) {
+                if (this.GetNodeArray().existValue("manager4Update")
+                        && this.GetNodeArray().existValue("workersQty4Update")) {
+
+                    pstmtUpdateJournalTask.setString(1, this.GetNodeArray().find("manager4Update").getStringValue());
+                    pstmtUpdateJournalTask.setString(2, this.GetNodeArray().find("workersQty4Update").getStringValue());
+                    pstmtUpdateJournalTask.setInt(3, idTask);
+                    pstmtUpdateJournalTask.executeUpdate();
+                }
+            }
+
+            //Task Section - Aplicacion Foliar - Para Refuerzo
+            if (boolSaveSection) {
+                //Save Task Section
+                pstmtCampSection.setInt(1, idTask);
+                rset = pstmtCampSection.executeQuery();
+                while (rset.next()) {
+                    section = rset.getString("SectionName");
+                    area = rset.getString("Area");
+                    landType = rset.getString("LandTypeName");
+                    pipeType = rset.getString("PipeType");
+
+                    pstmtInsertTaskSection.setInt(1, newIdTask);
+                    pstmtInsertTaskSection.setString(2, section);
+                    pstmtInsertTaskSection.setString(3, area);
+                    pstmtInsertTaskSection.setString(4, landType);
+                    pstmtInsertTaskSection.setString(5, pipeType);
+                    pstmtInsertTaskSection.setInt(6, idUser);
+                    pstmtInsertTaskSection.executeUpdate();
+
+                }
+                if (rset != null) {
+                    rset.close();
+                    rset = null;
+                }
+            }
+
+            //task history - Aplicacion Foliar - Para Refuerzo
+            if (boolSaveHistoryNewTask) {
+                pstmtInsertNewTaskHistory.setInt(1, newIdTask);
+                pstmtInsertNewTaskHistory.setString(2, taskType);
+                pstmtInsertNewTaskHistory.setString(3, camp);
+                pstmtInsertNewTaskHistory.setString(4, selectedSection);
+                pstmtInsertNewTaskHistory.setString(5, selectedLabor);
+                pstmtInsertNewTaskHistory.setString(6, selectedCrop);
+                pstmtInsertNewTaskHistory.setString(7, reinforcementDate);
+                pstmtInsertNewTaskHistory.setString(8, "Nueva");
+                pstmtInsertNewTaskHistory.setString(9, "Refuerzo de tarea numero: " + idTask);
+                pstmtInsertNewTaskHistory.setString(10, userName);
+                pstmtInsertNewTaskHistory.setString(11, supervisorName);
+                pstmtInsertNewTaskHistory.executeUpdate();
+            }
+
+            if (boolSaveHistory) {
+                pstmtInsertTaskHistory.setInt(1, idTask);
+                pstmtInsertTaskHistory.setString(2, taskType);
+                pstmtInsertTaskHistory.setString(3, camp);
+                pstmtInsertTaskHistory.setString(4, selectedSection);
+                pstmtInsertTaskHistory.setString(5, selectedLabor);
+                pstmtInsertTaskHistory.setString(6, selectedCrop);
+                pstmtInsertTaskHistory.setString(7, taskDate);
+                pstmtInsertTaskHistory.setString(8, status.equals("En Proceso") ? "Atendida" : status);
+                pstmtInsertTaskHistory.setString(9, comments);
+                pstmtInsertTaskHistory.setString(10, userName);
+                pstmtInsertTaskHistory.setString(11, supervisorName);
+                rowsAffected = pstmtInsertTaskHistory.executeUpdate();
+
+                if (rowsAffected > 0) {
+                    conn.commit();
+                    resultArray.add("RESPONSE_CODE", "PASS");
+                    resultArray.add("RESPONSE_MESSAGE", "La tarea ha sido registrada exitosamente.");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                } else {
+                    conn.rollback();
+                    resultArray.add("error", "La tarea no pudo ser registrada.");
+                    resultArray.add("RESPONSE_CODE", "FAIL");
+                    resultArray.add("RESPONSE_MESSAGE", "La tarea no pudo ser registrada.");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                }
+
+            }
+
+            return resultArray;
+        } catch (SQLException e) {
+            conn.rollback();
+            System.out.println("UpdateTaskStatusTransaction::Execute> SQLException: " + e.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "SQLException:" + e.getMessage());
+            resultArray.add("RESPONSE_DETAIL", e.getMessage());
+            return resultArray;
+        } catch (Exception ex) {
+            conn.rollback();
+            System.out.println("UpdateTaskStatusTransaction::Execute> Exception: " + ex.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "Exception:" + ex.getMessage());
+            resultArray.add("RESPONSE_DETAIL", ex.getMessage());
+            return resultArray;
+        } finally {
+            CloseStatements();
+//            System.out.println("<UpdateTaskStatusTransaction::Execute> exit");
+        }
+    }
+
+    /**
+     * Generates an xmlNodeArray containing parameters for this transaction
+     *
+     * @return xmlNodeArray that contains parameters for the transaction
+     * @exception (none)
+     */
+    @Override
+    public xmlNodeArray GenerateTestParameters() {
+        xmlNodeArray nodeArr = new xmlNodeArray();
+        nodeArr.add("TRANSACTION_CLASS_TO_EXECUTE", "JonesPlasticTransactions.UpdateTaskStatusTransaction");
+
+        return nodeArr;
+
+    }
+
+    /**
+     * The main method for the transaction. Creates a database connection and an
+     * error Array, then executes the transaction and reports any errors
+     *
+     * @param argv argv[0] is an optional configuration file name
+     * @exception (none)
+     */
+    public static void main(String[] argv) {
+        try {
+            UpdateTaskStatusTransaction transaction = new UpdateTaskStatusTransaction();
+            SIDWebTransaction resultTransaction = null;
+            xmlNodeArray inputParameterArray = null;
+            //CIMDataBase database = null;
+            System.out.println("Usage: java -classpath ...JonesPlasticTransactions.UpdateTaskStatusTransaction");
+
+            //<Add Database connection parameter for testing>
+            database = new SIDDataBase("jdbc:mysql://localhost:3306/agrocosa", "root", "entrar123");
+
+            transaction.SetSIDDataBase(database);
+            inputParameterArray = transaction.GenerateTestParameters();
+            if (!transaction.IsValidTransaction()) {
+                System.out.println(" UpdateTaskStatusTransaction contains an invalid transaction type.");
+            } else {
+                if (!transaction.Supports(inputParameterArray)) {
+                    System.out.println(" UpdateTaskStatusTransaction does not support this list of parameters.");
+                } else {
+                    resultTransaction = database.ExecuteTransaction("JonesPlasticTransactions.UpdateTaskStatusTransaction", inputParameterArray);
+                    if (resultTransaction == null) {
+                        System.out.println("The transaction's result array is null.");
+                    } else {
+                        if (resultTransaction.GetError() != null) {
+                            resultTransaction.GetError().print();
+                        } else {
+                            if (resultTransaction.GetResultArray() == null) {
+                                System.out.println("UpdateTaskStatusTransaction - No results were returned.");
+                            } else {
+                                xmlNodeArray array = resultTransaction.GetResultArray();
+                                String str = xmlNodeArray.xmlNodeArray2String(array);
+                                array = xmlNodeArray.string2xmlNodeArray(str);
+                                System.out.println(str);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("UpdateTaskStatusTransaction::main> caught exception " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}

@@ -1,0 +1,413 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package AgrocosaTransactions;
+
+import SIDWebEngine.*;
+import java.sql.*;
+import xmlNodeArray.*;
+
+public class CloseShippingTransaction extends SIDWebTransaction {
+
+    protected PreparedStatement pstmtUpdatehippingInfo;
+    protected PreparedStatement pstmtDeleteShippingInfo;
+    protected PreparedStatement pstmtInsertShippingHistory;
+    protected PreparedStatement pstmtInsertShippingHistory1;
+    protected PreparedStatement pstmtInsertShippingHistoryArrival;
+    protected PreparedStatement pstmtSelectShippingHistoryArrival;
+
+    /**
+     * Default Constructor
+     *
+     * @exception (none)
+     */
+    public CloseShippingTransaction() {
+        super();
+        SetTransactionType(SIDWebTransaction.SaveType);
+    }
+
+    /**
+     * Checks to see if the node Array is supported
+     *
+     * @param nodeArray
+     * @return <B>true</B> if the nodeArray is supported. <B>false</B> otherwise
+     * @exception (none)
+     */
+    @Override
+    public boolean Supports(xmlNodeArray nodeArray) {
+
+        //Add tag names as comma separated Strings to the mandatoryTags array
+        String[] mandatoryTags = {
+            "idShipping",
+            "driverName"
+        };
+
+        //Add tag names as comma separated Strings to the optionalTags array
+        String[] optionalTags = {};
+        //Add tag names as comma separated Strings to the mandatorySets array
+        String[] mandatorySets = {};
+        //Add tag names as comma separated Strings to the optionalSetTags array
+        String[] optionalSets = {};
+
+        xmlNodeArray errArray = new xmlNodeArray();
+        for (int i = 0; i < mandatoryTags.length; i++) {
+            if (!nodeArray.existValue(mandatoryTags[i])) {
+                System.out.println("<CloseShippingTransaction::Supports> " + mandatoryTags[i] + " Mandatory tag not found or value is empty/null");
+                errArray.add("ERROR", "MANDATORY_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalTags.length; i++) {
+            if (nodeArray.exist(optionalTags[i]) && !nodeArray.existValue(optionalTags[i])) {
+                System.out.println("<CloseShippingTransaction::Supports> " + optionalTags[i] + " Optional tag not found or value is empty/null");
+                errArray.add("OPTIONAL_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < mandatorySets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) == null || nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0) {
+                System.out.println("<CloseShippingTransaction::Supports> " + mandatorySets[i] + " Mandatory Set not found or value is empty/null");
+                errArray.add("MANDATORY_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalSets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) != null && (nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0)) {
+                System.out.println("<CloseShippingTransaction::Supports> " + optionalSets[i] + " Optional Set not found or value is empty/null");
+                errArray.add("OPTIONAL_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prepares the SQL statements to be executed
+     *
+     * @return <B>true</B> for successful preparation; <B>false</B> for
+     * unsuccessful preparation
+     * @exception (none)
+     */
+    @Override
+    public synchronized boolean PrepareStatements() {
+        //Note1 : Use PreparedStatements instead of Statements where ever possible
+        //Note2 : If transaction contains no prepared statements, delete entire function
+        //        Unless there are nested transaction, then Prepare will call those.
+        try {
+            Connection con = this.GetSIDDataBase().GetConnection();
+
+            pstmtUpdatehippingInfo = con.prepareStatement("update shipping "
+                    + "set Active = ?, "
+                    + "Status = 'Recibido', "
+                    + "ReceiptDate = now(), "
+                    + "Gate = ?, "
+                    + "Line = ?, "
+                    + "DriverName = ?, "
+                    + "Comments = ? "
+                    + "Where idShipping = ? ");
+
+            pstmtDeleteShippingInfo = con.prepareStatement("delete from shipping "
+                    + "Where idShipping = ? ");
+
+            pstmtInsertShippingHistory = con.prepareStatement("insert into shippinghistory ( "
+                    + "idShipping, "
+                    + "ReceiptDate, "
+                    + "Gate, "
+                    + "DriverName, "
+                    + "Status, "
+                    + "Comments, "
+                    + "InsertDate,"
+                    + "Line,"
+                    + "ArrivalDate "
+                    + ") values( "
+                    + "?, "//1 idShipping
+                    + "now(), " // ReceiptDate
+                    + "?, "//2 Gate
+                    + "?, "//3 DriverName
+                    + "?, "//4 Status
+                    + "?, "//5 Comments
+                    + "Now(), "
+                    + "?, " //6 Line
+                    + "? " //7 fechaLlegada
+                    + ")");
+
+            pstmtInsertShippingHistory1 = con.prepareStatement("insert into shippinghistory ( "
+                    + "idShipping, "
+                    + "ReceiptDate, "
+                    + "Gate, "
+                    + "DriverName, "
+                    + "Status, "
+                    + "Comments, "
+                    + "InsertDate,"
+                    + "Line,"
+                    + "ArrivalDate "
+                    + ") values( "
+                    + "?, "//1 idShipping
+                    + "now(), " // ReceiptDate
+                    + "?, "//2 Gate
+                    + "?, "//3 DriverName
+                    + "?, "//4 Status
+                    + "?, "//5 Comments
+                    + "Now(), "
+                    + "?, " //6 Line
+                    + "Now() " //7 fechaLlegada
+                    + ")");
+
+            pstmtInsertShippingHistoryArrival = con.prepareStatement("insert into shippinghistory ( "
+                    + "idShipping, "
+                    + "ArrivalDate, "
+                    + "Gate, "
+                    + "DriverName, "
+                    + "Status, "
+                    + "Comments, "
+                    + "InsertDate, "
+                    + "Line "
+                    + ") values( "
+                    + "?, "//1 idShipping
+                    + "now(), " // ReceiptDate
+                    + "?, "//2 Gate
+                    + "?, "//3 DriverName
+                    + "?, "//4 Status
+                    + "?, "//5 Comments
+                    + "Now(), "
+                    + "? " //6 Line
+                    + ")");
+
+            pstmtSelectShippingHistoryArrival = con.prepareStatement("select "
+                    + "coalesce(ArrivalDate,'') as ArrivalDate "
+                    + "from shippinghistory "
+                    + "where idShipping = ? "
+                    + "and status = 'Llegada' ");
+
+            this.addPreparedStatement(pstmtUpdatehippingInfo);
+            this.addPreparedStatement(pstmtDeleteShippingInfo);
+            this.addPreparedStatement(pstmtInsertShippingHistory);
+            this.addPreparedStatement(pstmtInsertShippingHistory1);
+            this.addPreparedStatement(pstmtInsertShippingHistoryArrival);
+            this.addPreparedStatement(pstmtSelectShippingHistoryArrival);
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("CloseShippingTransaction::PrepareStatements> SQLException: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * executes sql statements using input arguments and returns result
+     *
+     * @return valid node array if successful else null
+     * @exception SQLException if sql error occurs
+     * @exception Exception if non sql error occurs
+     */
+    @Override
+    public synchronized xmlNodeArray Execute() throws SQLException, Exception {
+        Connection conn = null;
+        xmlNodeArray resultArray = null;
+        ResultSet rset = null;
+        int rowsAffected = 0;
+        int idShipping = 0;
+        int active = 0;
+        String driverName = "";
+        String gate = "";
+        String comments = "";
+        String trailer = "";
+        String trucking = "";
+        String loading = "";
+        double quantity = 0;
+        double weight = 0;
+        String uom = "";
+        String creationDate = "";
+        String registrar = "";
+        String line = "";
+        String fechaLlegada = "";
+        boolean boolSaveHistory = false;
+
+        try {
+
+            conn = this.GetSIDDataBase().GetConnection();
+            conn.setAutoCommit(false);
+            resultArray = new xmlNodeArray();
+
+            idShipping = GetNodeArray().find("idShipping").getIntValue();
+            driverName = GetNodeArray().find("driverName").getStringValue();
+            gate = GetNodeArray().find("gate").getStringValue();
+            line = GetNodeArray().find("line").getStringValue();
+            comments = GetNodeArray().find("comments").getStringValue();
+            registrar = GetNodeArray().find("registrar").getStringValue();
+
+            pstmtSelectShippingHistoryArrival.setInt(1, idShipping);
+            rset = pstmtSelectShippingHistoryArrival.executeQuery();
+            if (rset.next()) {
+                fechaLlegada = rset.getString("ArrivalDate");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            if (registrar.equals("Arrive") || registrar.equals("Unloading")) {
+                active = 1;
+            }
+
+            pstmtUpdatehippingInfo.setInt(1, active);
+            pstmtUpdatehippingInfo.setString(2, gate);
+            pstmtUpdatehippingInfo.setString(3, line);
+            pstmtUpdatehippingInfo.setString(4, driverName);
+            pstmtUpdatehippingInfo.setString(5, comments);
+            pstmtUpdatehippingInfo.setInt(6, idShipping);
+            rowsAffected = pstmtUpdatehippingInfo.executeUpdate();
+
+            if (rowsAffected > 0) {
+                boolSaveHistory = true;
+            }
+
+            if (boolSaveHistory) {
+                if (registrar.equals("Arrive") || registrar.equals("Unloading")) {
+                    pstmtInsertShippingHistoryArrival.setInt(1, idShipping);
+                    pstmtInsertShippingHistoryArrival.setString(2, gate);
+                    pstmtInsertShippingHistoryArrival.setString(3, driverName);
+                    if (registrar.equals("Arrive")) {
+                        pstmtInsertShippingHistoryArrival.setString(4, "LLegada");
+                    } else {
+                        pstmtInsertShippingHistoryArrival.setString(4, "Descargando");
+                    }
+                    pstmtInsertShippingHistoryArrival.setString(5, comments);
+                    pstmtInsertShippingHistoryArrival.setString(6, line);
+                    rowsAffected = pstmtInsertShippingHistoryArrival.executeUpdate();
+                } else {
+                    if (fechaLlegada.equals("")) {
+                        //fechaLlegada = "now()";
+                        pstmtInsertShippingHistory1.setInt(1, idShipping);
+                        pstmtInsertShippingHistory1.setString(2, gate);
+                        pstmtInsertShippingHistory1.setString(3, driverName);
+                        pstmtInsertShippingHistory1.setString(4, "Recibido");
+                        pstmtInsertShippingHistory1.setString(5, comments);
+                        pstmtInsertShippingHistory1.setString(6, line);
+                        rowsAffected = pstmtInsertShippingHistory1.executeUpdate();
+                    } else {
+                        pstmtInsertShippingHistory.setInt(1, idShipping);
+                        pstmtInsertShippingHistory.setString(2, gate);
+                        pstmtInsertShippingHistory.setString(3, driverName);
+                        pstmtInsertShippingHistory.setString(4, "Recibido");
+                        pstmtInsertShippingHistory.setString(5, comments);
+                        pstmtInsertShippingHistory.setString(6, line);
+                        pstmtInsertShippingHistory.setString(7, fechaLlegada);
+                        rowsAffected = pstmtInsertShippingHistory.executeUpdate();
+                    }
+                }
+
+                if (rowsAffected > 0) {
+                    conn.commit();
+                    resultArray.add("RESPONSE_CODE", "PASS");
+                    resultArray.add("RESPONSE_MESSAGE", "El embarque ha sido registrado exitosamente.");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                } else {
+                    conn.rollback();
+                    resultArray.add("error", "El embarque no pudo ser registrado.");
+                    resultArray.add("RESPONSE_CODE", "FAIL");
+                    resultArray.add("RESPONSE_MESSAGE", "El embarque no pudo ser registrado.");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                }
+
+            }
+
+            return resultArray;
+        } catch (SQLException e) {
+            conn.rollback();
+            System.out.println("CloseShippingTransaction::Execute> SQLException: " + e.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "SQLException:" + e.getMessage());
+            resultArray.add("RESPONSE_DETAIL", e.getMessage());
+            return resultArray;
+        } catch (Exception ex) {
+            conn.rollback();
+            System.out.println("CloseShippingTransaction::Execute> Exception: " + ex.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "Exception:" + ex.getMessage());
+            resultArray.add("RESPONSE_DETAIL", ex.getMessage());
+            return resultArray;
+        } finally {
+            CloseStatements();
+//            System.out.println("<CloseShippingTransaction::Execute> exit");
+        }
+    }
+
+    /**
+     * Generates an xmlNodeArray containing parameters for this transaction
+     *
+     * @return xmlNodeArray that contains parameters for the transaction
+     * @exception (none)
+     */
+    @Override
+    public xmlNodeArray GenerateTestParameters() {
+        xmlNodeArray nodeArr = new xmlNodeArray();
+        nodeArr.add("TRANSACTION_CLASS_TO_EXECUTE", "JonesPlasticTransactions.CloseShippingTransaction");
+
+        return nodeArr;
+
+    }
+
+    /**
+     * The main method for the transaction. Creates a database connection and an
+     * error Array, then executes the transaction and reports any errors
+     *
+     * @param argv argv[0] is an optional configuration file name
+     * @exception (none)
+     */
+    public static void main(String[] argv) {
+        try {
+            CloseShippingTransaction transaction = new CloseShippingTransaction();
+            SIDWebTransaction resultTransaction = null;
+            xmlNodeArray inputParameterArray = null;
+            //CIMDataBase database = null;
+            System.out.println("Usage: java -classpath ...JonesPlasticTransactions.CloseShippingTransaction");
+
+            //<Add Database connection parameter for testing>
+            database = new SIDDataBase("jdbc:mysql://www.sidchihuahua.com:3306/zodiac", "zodiac_admin", "Z0d14c#4");
+
+            transaction.SetSIDDataBase(database);
+            inputParameterArray = transaction.GenerateTestParameters();
+            if (!transaction.IsValidTransaction()) {
+                System.out.println(" CloseShippingTransaction contains an invalid transaction type.");
+            } else {
+                if (!transaction.Supports(inputParameterArray)) {
+                    System.out.println(" CloseShippingTransaction does not support this list of parameters.");
+                } else {
+                    resultTransaction = database.ExecuteTransaction("JonesPlasticTransactions.CloseShippingTransaction", inputParameterArray);
+                    if (resultTransaction == null) {
+                        System.out.println("The transaction's result array is null.");
+                    } else {
+                        if (resultTransaction.GetError() != null) {
+                            resultTransaction.GetError().print();
+                        } else {
+                            if (resultTransaction.GetResultArray() == null) {
+                                System.out.println("CloseShippingTransaction - No results were returned.");
+                            } else {
+                                xmlNodeArray array = resultTransaction.GetResultArray();
+                                String str = xmlNodeArray.xmlNodeArray2String(array);
+                                array = xmlNodeArray.string2xmlNodeArray(str);
+                                System.out.println(str);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("CloseShippingTransaction::main> caught exception " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}

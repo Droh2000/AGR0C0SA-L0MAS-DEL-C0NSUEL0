@@ -1,0 +1,484 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package AgrocosaTransactions;
+
+import SIDWebEngine.*;
+import java.sql.*;
+import xmlNodeArray.*;
+
+public class SaveCancelStockTransferOrderTransaction extends SIDWebTransaction {
+
+    protected PreparedStatement pstmtSelectTransferOrderDetail;
+    protected PreparedStatement pstmtSelectActualStorage;
+    protected PreparedStatement pstmtInsertInventoryMovement;
+    protected PreparedStatement pstmtUpdateStockTransferOrder;
+    protected PreparedStatement pstmtInsertStockTransferOrderHistory;
+    protected PreparedStatement pstmtUser;
+    protected PreparedStatement pstmtSelectStockTransferOrder;
+    protected PreparedStatement pstmtSelectProforma;
+
+    /**
+     * Default Constructor
+     *
+     * @exception (none)
+     */
+    public SaveCancelStockTransferOrderTransaction() {
+        super();
+        SetTransactionType(SIDWebTransaction.SaveType);
+    }
+
+    /**
+     * Checks to see if the node Array is supported
+     *
+     * @param nodeArray
+     * @return <B>true</B> if the nodeArray is supported. <B>false</B> otherwise
+     * @exception (none)
+     */
+    @Override
+    public boolean Supports(xmlNodeArray nodeArray) {
+
+        //Add tag names as comma separated Strings to the mandatoryTags array
+        String[] mandatoryTags = {
+            "idUser",
+            "idStockTransferOrder",
+            "comments"
+        };
+
+        //Add tag names as comma separated Strings to the optionalTags array
+        String[] optionalTags = {};
+        //Add tag names as comma separated Strings to the mandatorySets array
+        String[] mandatorySets = {};
+        //Add tag names as comma separated Strings to the optionalSetTags array
+        String[] optionalSets = {};
+
+        xmlNodeArray errArray = new xmlNodeArray();
+        for (int i = 0; i < mandatoryTags.length; i++) {
+            if (!nodeArray.existValue(mandatoryTags[i])) {
+                System.out.println("<SaveCancelStockTransferOrderTransaction::Supports> " + mandatoryTags[i] + " Mandatory tag not found or value is empty/null");
+                errArray.add("ERROR", "MANDATORY_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalTags.length; i++) {
+            if (nodeArray.exist(optionalTags[i]) && !nodeArray.existValue(optionalTags[i])) {
+                System.out.println("<SaveCancelStockTransferOrderTransaction::Supports> " + optionalTags[i] + " Optional tag not found or value is empty/null");
+                errArray.add("OPTIONAL_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < mandatorySets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) == null || nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0) {
+                System.out.println("<SaveCancelStockTransferOrderTransaction::Supports> " + mandatorySets[i] + " Mandatory Set not found or value is empty/null");
+                errArray.add("MANDATORY_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalSets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) != null && (nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0)) {
+                System.out.println("<SaveCancelStockTransferOrderTransaction::Supports> " + optionalSets[i] + " Optional Set not found or value is empty/null");
+                errArray.add("OPTIONAL_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prepares the SQL statements to be executed
+     *
+     * @return <B>true</B> for successful preparation; <B>false</B> for
+     * unsuccessful preparation
+     * @exception (none)
+     */
+    @Override
+    public synchronized boolean PrepareStatements() {
+        //Note1 : Use PreparedStatements instead of Statements where ever possible
+        //Note2 : If transaction contains no prepared statements, delete entire function
+        //        Unless there are nested transaction, then Prepare will call those.
+        try {
+            Connection con = this.GetSIDDataBase().GetConnection();
+
+            pstmtSelectTransferOrderDetail = con.prepareStatement("select * "
+                    + "from stocktransferorderdetail "
+                    + "where idStockTransferOrder = ? ");
+
+            pstmtSelectActualStorage = con.prepareStatement("select "
+                    + "storage.StorageName, "
+                    + "substorage.SubstorageName "
+                    + "from inventory inner join "
+                    + "storage on storage.idStorage = inventory.idStorage inner join "
+                    + "substorage on substorage.idSubStorage = inventory.idSubstorage "
+                    + "where PalletId = ? ");
+
+            pstmtInsertInventoryMovement = con.prepareStatement("insert into inventorymovement ("
+                    + "PalletId, "
+                    + "Process, "
+                    + "MovementType, "
+                    + "ProductName, "
+                    + "Size, "
+                    + "Color, "
+                    + "Quantity, "
+                    + "StorageNameOut, "
+                    + "SubstorageNameOut, "
+                    + "StorageNameIn, "
+                    + "SubstorageNameIn, "
+                    + "Comments, "
+                    + "User, "
+                    + "InsertDate, "
+                    + "Active "
+                    + ") values("
+                    + "?, "//1 PalletId
+                    + "?, "//2 Process
+                    + "?, "//3 MovementType
+                    + "?, "//4 ProductName
+                    + "?, "//5 Size
+                    + "?, "//6 Color
+                    + "?, "//7 Quantity
+                    + "?, "//8 StorageNameOut
+                    + "?, "//9 SubstorageNameOut
+                    + "?, "//10 StorageNameIn
+                    + "?, "//11 SubstorageNameIn
+                    + "?, "//12 Comment
+                    + "?, "//13 User
+                    + "Now(), "
+                    + "1 "
+                    + ")");
+
+            pstmtUpdateStockTransferOrder = con.prepareStatement("update stocktransferorder set  "
+                    + "Proforma = ?, "
+                    + "Status = ?, "
+                    + "idUser = ?, "
+                    + "ModifiedDate = Now() "
+                    + "Where idStockTransferOrder = ? ");
+
+            pstmtInsertStockTransferOrderHistory = con.prepareStatement("insert into stocktransferorderhistory ("
+                    + "idStockTransferOrder, "
+                    + "Proforma, "
+                    + "Process, "
+                    + "MovementType, "
+                    + "Quantity, "
+                    + "Comments, "
+                    + "User, "
+                    + "InsertDate, "
+                    + "Active "
+                    + ") values("
+                    + "?, "//1 idStockTransferOrder
+                    + "?, "//2 Proforma
+                    + "?, "//3 Process
+                    + "?, "//4 MovementType
+                    + "?, "//5 Quantity
+                    + "?, "//6 Comments
+                    + "?, "//7 User
+                    + "Now(), "
+                    + "1 "
+                    + ")");
+
+            pstmtUser = con.prepareStatement("select concat(FirstName,' ',LastName) User "
+                    + "from user "
+                    + "where idUser = ? ");
+
+            pstmtSelectStockTransferOrder = con.prepareStatement("SELECT "
+                    + "TransportCompany, "
+                    + "TruckDriverName, "
+                    + "TruckPlate, "
+                    + "count(*) as Qty "
+                    + "FROM stocktransferorder inner join "
+                    + "stocktransferorderdetail on stocktransferorderdetail.idStockTransferOrder = stocktransferorder.idStockTransferOrder "
+                    + "where stocktransferorder.idStockTransferOrder = ? "
+                    + "Group by TransportCompany, TruckDriverName, Plate");
+
+            pstmtSelectProforma = con.prepareStatement("SELECT "
+                    + "Distinct Proforma "
+                    + "FROM stocktransferorderhistory "
+                    + "where idStockTransferOrder = ? "
+                    + "and Proforma is not null");
+            
+                    
+            this.addPreparedStatement(pstmtSelectTransferOrderDetail);
+            this.addPreparedStatement(pstmtSelectActualStorage);
+            this.addPreparedStatement(pstmtInsertInventoryMovement);
+            this.addPreparedStatement(pstmtUpdateStockTransferOrder);
+            this.addPreparedStatement(pstmtInsertStockTransferOrderHistory);
+            this.addPreparedStatement(pstmtUser);
+            this.addPreparedStatement(pstmtSelectStockTransferOrder);
+            this.addPreparedStatement(pstmtSelectProforma);
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("SaveCancelStockTransferOrderTransaction::PrepareStatements> SQLException: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * executes sql statements using input arguments and returns result
+     *
+     * @return valid node array if successful else null
+     * @exception SQLException if sql error occurs
+     * @exception Exception if non sql error occurs
+     */
+    @Override
+    public synchronized xmlNodeArray Execute() throws SQLException, Exception {
+        Connection conn = null;
+        xmlNodeArray resultArray = null;
+        ResultSet rset = null;
+        ResultSet rset2 = null;
+        int rowsAffected = 0;
+        int idUser = 0;
+        int idStockTransferOrder = 0;
+        String userName = "";
+        String storageName = "";
+        String substorageName = "";
+        String productName = "";
+        String size = "";
+        String color = "";
+        int quantity = 0;
+        String palletId = "";
+        String result = "";
+        int palletQty = 0;
+        String comments = "";
+        String proforma = "";
+
+        try {
+
+            conn = this.GetSIDDataBase().GetConnection();
+            conn.setAutoCommit(false);
+            resultArray = new xmlNodeArray();
+
+            idUser = GetNodeArray().find("idUser").getIntValue();
+            idStockTransferOrder = GetNodeArray().find("idStockTransferOrder").getIntValue();
+            comments = GetNodeArray().find("comments").getStringValue();
+
+            //User Name
+            pstmtUser.setInt(1, idUser);
+            rset = pstmtUser.executeQuery();
+            if (rset.next()) {
+                userName = rset.getString("User");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            pstmtSelectTransferOrderDetail.setInt(1, idStockTransferOrder);
+            rset = pstmtSelectTransferOrderDetail.executeQuery();
+            while (rset.next()) {
+                palletId = rset.getString("PalletId");
+                productName = rset.getString("ProductName");
+                size = rset.getString("Size");
+                color = rset.getString("Color");
+                quantity = rset.getInt("Quantity");
+
+                //Select actual storage
+                pstmtSelectActualStorage.setString(1, palletId);
+                rset2 = pstmtSelectActualStorage.executeQuery();
+                if (rset2.next()) {
+                    storageName = rset2.getString("StorageName");
+                    substorageName = rset2.getString("SubstorageName");
+                }
+                if (rset2 != null) {
+                    rset2.close();
+                    rset2 = null;
+                }
+
+                //Insert pallet Movement
+                pstmtInsertInventoryMovement.setString(1, palletId);
+                pstmtInsertInventoryMovement.setString(2, "Embarque");
+                pstmtInsertInventoryMovement.setString(3, "Cancelado");
+                pstmtInsertInventoryMovement.setString(4, productName);
+                pstmtInsertInventoryMovement.setString(5, size);
+                pstmtInsertInventoryMovement.setString(6, color);
+                pstmtInsertInventoryMovement.setInt(7, quantity);
+                pstmtInsertInventoryMovement.setString(8, storageName);
+                pstmtInsertInventoryMovement.setString(9, substorageName);
+                pstmtInsertInventoryMovement.setString(10, "");
+                pstmtInsertInventoryMovement.setString(11, "");
+                pstmtInsertInventoryMovement.setString(12, comments);
+                pstmtInsertInventoryMovement.setString(13, userName);
+                rowsAffected = pstmtInsertInventoryMovement.executeUpdate();
+                if (rowsAffected > 0) {
+                    result += "1";
+                } else {
+                    result += "0";
+                }
+
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            //select stock transfer order
+            pstmtSelectStockTransferOrder.setInt(1, idStockTransferOrder);
+            rset = pstmtSelectStockTransferOrder.executeQuery();
+            if (rset.next()) {
+                palletQty = rset.getInt("Qty");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+            
+            pstmtSelectProforma.setInt(1, idStockTransferOrder);
+            rset = pstmtSelectProforma.executeQuery();
+            if(rset.next()){
+                proforma = rset.getString("Proforma");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+            
+
+            if (!result.contains("0")) {
+                //update stock transfer order  status
+                pstmtUpdateStockTransferOrder.setString(1, proforma);
+                pstmtUpdateStockTransferOrder.setString(2, "Cancelada");
+                pstmtUpdateStockTransferOrder.setInt(3, idUser);
+                pstmtUpdateStockTransferOrder.setInt(4, idStockTransferOrder);
+                rowsAffected = pstmtUpdateStockTransferOrder.executeUpdate();
+
+                if (rowsAffected > 0) {
+                    //Insert stocktransferorderhistory
+                    pstmtInsertStockTransferOrderHistory.setInt(1, idStockTransferOrder);
+                    pstmtInsertStockTransferOrderHistory.setString(2, proforma);
+                    pstmtInsertStockTransferOrderHistory.setString(3, "Embarque");
+                    pstmtInsertStockTransferOrderHistory.setString(4, "Cancelada");
+                    pstmtInsertStockTransferOrderHistory.setInt(5, palletQty);
+                    pstmtInsertStockTransferOrderHistory.setString(6, comments);
+                    pstmtInsertStockTransferOrderHistory.setString(7, userName);
+                    rowsAffected = pstmtInsertStockTransferOrderHistory.executeUpdate();
+                    if (rowsAffected > 0) {
+                        conn.commit();
+                        resultArray.add("RESPONSE_CODE", "PASS");
+                        resultArray.add("RESPONSE_MESSAGE", "Embarque cancelado exitosamente.");
+                        resultArray.add("RESPONSE_DETAIL", "");
+                    } else {
+                        conn.rollback();
+                        resultArray.add("error", "El Embarque no pudo ser cancelado.");
+                        resultArray.add("RESPONSE_CODE", "FAIL");
+                        resultArray.add("RESPONSE_MESSAGE", "El pallet no pudo ser cancelado.");
+                        resultArray.add("RESPONSE_DETAIL", "");
+                    }
+                } else {
+                    conn.rollback();
+                    resultArray.add("error", "El Embarque no pudo ser cancelado.");
+                    resultArray.add("RESPONSE_CODE", "FAIL");
+                    resultArray.add("RESPONSE_MESSAGE", "El Embarque no pudo ser cancelado.");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                }
+            } else {
+                conn.rollback();
+                resultArray.add("error", "El Embarque no pudo ser registrado.");
+                resultArray.add("RESPONSE_CODE", "FAIL");
+                resultArray.add("RESPONSE_MESSAGE", "El Embarque no pudo ser registrado.");
+                resultArray.add("RESPONSE_DETAIL", "");
+            }
+
+            return resultArray;
+        } catch (SQLException e) {
+            conn.rollback();
+            System.out.println("SaveCancelStockTransferOrderTransaction::Execute> SQLException: " + e.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "SQLException:" + e.getMessage());
+            resultArray.add("RESPONSE_DETAIL", e.getMessage());
+            return resultArray;
+        } catch (Exception ex) {
+            conn.rollback();
+            System.out.println("SaveCancelStockTransferOrderTransaction::Execute> Exception: " + ex.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "Exception:" + ex.getMessage());
+            resultArray.add("RESPONSE_DETAIL", ex.getMessage());
+            return resultArray;
+        } finally {
+            CloseStatements();
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+            if (rset2 != null) {
+                rset2.close();
+                rset2 = null;
+            }
+        }
+    }
+
+    /**
+     * Generates an xmlNodeArray containing parameters for this transaction
+     *
+     * @return xmlNodeArray that contains parameters for the transaction
+     * @exception (none)
+     */
+    @Override
+    public xmlNodeArray GenerateTestParameters() {
+        xmlNodeArray nodeArr = new xmlNodeArray();
+        nodeArr.add("TRANSACTION_CLASS_TO_EXECUTE", "JonesPlasticTransactions.SaveCancelStockTransferOrderTransaction");
+
+        return nodeArr;
+
+    }
+
+    /**
+     * The main method for the transaction. Creates a database connection and an
+     * error Array, then executes the transaction and reports any errors
+     *
+     * @param argv argv[0] is an optional configuration file name
+     * @exception (none)
+     */
+    public static void main(String[] argv) {
+        try {
+            SaveCancelStockTransferOrderTransaction transaction = new SaveCancelStockTransferOrderTransaction();
+            SIDWebTransaction resultTransaction = null;
+            xmlNodeArray inputParameterArray = null;
+            //CIMDataBase database = null;
+            System.out.println("Usage: java -classpath ...JonesPlasticTransactions.SaveCancelStockTransferOrderTransaction");
+
+            //<Add Database connection parameter for testing>
+            database = new SIDDataBase("jdbc:mysql://localhost:3306/agrocosa", "root", "entrar123");
+
+            transaction.SetSIDDataBase(database);
+            inputParameterArray = transaction.GenerateTestParameters();
+            if (!transaction.IsValidTransaction()) {
+                System.out.println(" SaveCancelStockTransferOrderTransaction contains an invalid transaction type.");
+            } else {
+                if (!transaction.Supports(inputParameterArray)) {
+                    System.out.println(" SaveCancelStockTransferOrderTransaction does not support this list of parameters.");
+                } else {
+                    resultTransaction = database.ExecuteTransaction("JonesPlasticTransactions.SaveCancelStockTransferOrderTransaction", inputParameterArray);
+                    if (resultTransaction == null) {
+                        System.out.println("The transaction's result array is null.");
+                    } else {
+                        if (resultTransaction.GetError() != null) {
+                            resultTransaction.GetError().print();
+                        } else {
+                            if (resultTransaction.GetResultArray() == null) {
+                                System.out.println("SaveCancelStockTransferOrderTransaction - No results were returned.");
+                            } else {
+                                xmlNodeArray array = resultTransaction.GetResultArray();
+                                String str = xmlNodeArray.xmlNodeArray2String(array);
+                                array = xmlNodeArray.string2xmlNodeArray(str);
+                                System.out.println(str);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("SaveCancelStockTransferOrderTransaction::main> caught exception " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}

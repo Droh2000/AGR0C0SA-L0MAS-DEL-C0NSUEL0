@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context antiResourceLocking="true" allowCasualMultipartParsing="true" path="/Agrocosa">   
+    <Resource auth="Container"
+                  driverClassName="com.mysql.jdbc.Driver"
+                  logAbandoned="true"
+                  maxActive="100"
+                  maxIdle="30"
+                  maxWait="30"
+                  name="jdbc/primary"
+                  removeAbandoned="true"
+                  removeAbandonedTimeout="120"
+                  type="javax.sql.DataSource"
+                  url="jdbc:mysql://www.agrocosa.mx:3306/agrocosa_prod"
+                  username="agrocosa_admin"
+                  password="Agr0c0s4#"/>                     
+</Context>

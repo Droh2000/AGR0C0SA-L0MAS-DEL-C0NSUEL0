@@ -1,0 +1,354 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package AgrocosaTransactions;
+
+import SIDWebEngine.*;
+import java.sql.*;
+import xmlNodeArray.*;
+
+public class CancelNewShippingOrderTransaction extends SIDWebTransaction {
+
+    protected PreparedStatement pstmtSelect;
+    protected PreparedStatement pstmtUpdate;
+    protected PreparedStatement pstmtInsertHistory;
+    protected PreparedStatement pstmtUser;
+
+    /**
+     * Default Constructor
+     *
+     * @exception (none)
+     */
+    public CancelNewShippingOrderTransaction() {
+        super();
+        SetTransactionType(SIDWebTransaction.SaveType);
+    }
+
+    /**
+     * Checks to see if the node Array is supported
+     *
+     * @param nodeArray
+     * @return <B>true</B> if the nodeArray is supported. <B>false</B> otherwise
+     * @exception (none)
+     */
+    @Override
+    public boolean Supports(xmlNodeArray nodeArray) {
+
+        //Add tag names as comma separated Strings to the mandatoryTags array
+        String[] mandatoryTags = {"idUser", "idShippingOrder"};
+
+        //Add tag names as comma separated Strings to the optionalTags array
+        String[] optionalTags = {};
+        //Add tag names as comma separated Strings to the mandatorySets array
+        String[] mandatorySets = {};
+        //Add tag names as comma separated Strings to the optionalSetTags array
+        String[] optionalSets = {};
+
+        xmlNodeArray errArray = new xmlNodeArray();
+        for (int i = 0; i < mandatoryTags.length; i++) {
+            if (!nodeArray.existValue(mandatoryTags[i])) {
+                System.out.println("<CancelNewShippingOrderTransaction::Supports> " + mandatoryTags[i] + " Mandatory tag not found or value is empty/null");
+                errArray.add("ERROR", "MANDATORY_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalTags.length; i++) {
+            if (nodeArray.exist(optionalTags[i]) && !nodeArray.existValue(optionalTags[i])) {
+                System.out.println("<CancelNewShippingOrderTransaction::Supports> " + optionalTags[i] + " Optional tag not found or value is empty/null");
+                errArray.add("OPTIONAL_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < mandatorySets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) == null || nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0) {
+                System.out.println("<CancelNewShippingOrderTransaction::Supports> " + mandatorySets[i] + " Mandatory Set not found or value is empty/null");
+                errArray.add("MANDATORY_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalSets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) != null && (nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0)) {
+                System.out.println("<CancelNewShippingOrderTransaction::Supports> " + optionalSets[i] + " Optional Set not found or value is empty/null");
+                errArray.add("OPTIONAL_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prepares the SQL statements to be executed
+     *
+     * @return <B>true</B> for successful preparation; <B>false</B> for
+     * unsuccessful preparation
+     * @exception (none)
+     */
+    @Override
+    public synchronized boolean PrepareStatements() {
+        //Note1 : Use PreparedStatements instead of Statements where ever possible
+        //Note2 : If transaction contains no prepared statements, delete entire function
+        //        Unless there are nested transaction, then Prepare will call those.
+        try {
+            Connection con = this.GetSIDDataBase().GetConnection();
+
+            pstmtSelect = con.prepareStatement("SELECT "
+                    + "so.idShippingOrder, "
+                    + "c.CustomerName, "
+                    + "so.PickupNumber, "
+                    + "date_format(so.ShippingDate,'%d/%m/%Y %h:%i %p') as ShippingDate, "
+                    + "so.Status, "
+                    + "so.Comments, "
+                    + "concat(u.FirstName,' ',u.LastName) UserName, "
+                    + "Sum(sod.Quantity) as OrderQty "
+                    + "FROM shippingorder so inner join "
+                    + "customer c on c.idCustomer = so.idCustomer inner join "
+                    + "user u on u.idUser = so.idUser inner join "
+                    + "shippingorderdetail sod on sod.idShippingOrder = so.idShippingOrder "
+                    + "where so.idShippingOrder = ? "
+                    + "Group by so.idShippingOrder, "
+                    + "c.CustomerName, "
+                    + "so.PickupNumber, "
+                    + "so.ShippingDate, "
+                    + "so.Status, "
+                    + "so.Comments, "
+                    + "concat(u.FirstName,' ',u.LastName)");
+
+            pstmtUpdate = con.prepareStatement("update shippingorder set "
+                    + "Status = 'Cancelada', "
+                    + "ModifiedDate = NOW(), "
+                    + "idUser = ? "
+                    + "Where idShippingOrder = ? ");
+
+            pstmtInsertHistory = con.prepareStatement("Insert into shippingorderhistory ( "
+                    + "idShippingOrder, "
+                    + "CustomerName, "
+                    + "PickupNumber, "
+                    + "Process, "
+                    + "MovementType, "
+                    + "Quantity,  "
+                    + "Comments, "
+                    + "User, "
+                    + "InsertDate "
+                    + ") Values( "
+                    + "?, "// 1 idShippingOrder
+                    + "?, "// 2 CustomerName
+                    + "?, "// 3 PickupNumber
+                    + "'Embarque', "// Process
+                    + "'Nueva', "// MovementType
+                    + "?, "// 4 Quantity
+                    + "?, "// 5 Comments
+                    + "?, "// 6 User
+                    + "Now() " // InsertDate
+                    + ")");
+
+            pstmtUser = con.prepareStatement("select concat(FirstName,' ',LastName) User "
+                    + "from user "
+                    + "where idUser = ? ");
+
+            this.addPreparedStatement(pstmtSelect);
+            this.addPreparedStatement(pstmtUpdate);
+            this.addPreparedStatement(pstmtInsertHistory);
+            this.addPreparedStatement(pstmtUser);
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("CancelNewShippingOrderTransaction::PrepareStatements> SQLException: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * executes sql statements using input arguments and returns result
+     *
+     * @return valid node array if successful else null
+     * @exception SQLException if sql error occurs
+     * @exception Exception if non sql error occurs
+     */
+    @Override
+    public synchronized xmlNodeArray Execute() throws SQLException, Exception {
+        Connection conn = null;
+        ResultSet rset = null;
+        xmlNodeArray resultArray = null;
+        int idShippingOrder = 0;
+        int idUser = 0;
+        int rowsAffected = 0;
+        String customer = "";
+        String pickupNumber = "";
+        String comments = "";
+        String userName = "";
+        int orderQty = 0;
+
+        try {
+//            System.out.println("<CancelNewShippingOrderTransaction::Execute> enter");
+            conn = this.GetSIDDataBase().GetConnection();
+            conn.setAutoCommit(false);
+            resultArray = new xmlNodeArray();
+
+            idShippingOrder = GetNodeArray().find("idShippingOrder").getIntValue();
+            idUser = GetNodeArray().find("idUser").getIntValue();
+            if (this.GetNodeArray().existValue("comments")) {
+                comments = GetNodeArray().find("comments").getStringValue();
+            }
+            //User Name
+            pstmtUser.setInt(1, idUser);
+            rset = pstmtUser.executeQuery();
+            if (rset.next()) {
+                userName = rset.getString("User");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+            
+            //order
+            pstmtSelect.setInt(1, idShippingOrder);
+            rset = pstmtSelect.executeQuery();
+            if (rset.next()) {
+                customer = rset.getString("CustomerName");
+                pickupNumber = rset.getString("PickupNumber");
+                orderQty = rset.getInt("OrderQty");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            //Update  - Cancel
+            pstmtUpdate.setInt(1, idUser);
+            pstmtUpdate.setInt(2, idShippingOrder);
+            rowsAffected = pstmtUpdate.executeUpdate();
+            if (rowsAffected > 0) {
+                //Insert order history
+                pstmtInsertHistory.setInt(1, idShippingOrder);
+                pstmtInsertHistory.setString(2, customer);
+                pstmtInsertHistory.setString(3, pickupNumber);
+                pstmtInsertHistory.setInt(4, orderQty);
+                pstmtInsertHistory.setString(5, comments);
+                pstmtInsertHistory.setString(6, userName);
+                rowsAffected = pstmtInsertHistory.executeUpdate();
+                if (rowsAffected > 0) {
+                    conn.commit();
+                    resultArray.add("pass", "La orden de embarque numero = " + idShippingOrder + " ha sido cancelada exitosamente.");
+                    resultArray.add("RESPONSE_CODE", "PASS");
+                    resultArray.add("RESPONSE_MESSAGE", "La orden de embarque numero = " + idShippingOrder + " ha sido cancelada exitosamente.");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                } else {
+                    conn.rollback();
+                    resultArray.add("error", "El historial de la orden de embarque no pudo ser registrada.");
+                    resultArray.add("RESPONSE_CODE", "FAIL");
+                    resultArray.add("RESPONSE_MESSAGE", "El historial de la orden de embarque no pudo ser registrada.");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                }
+            } else {
+                resultArray.add("error", "La orden no pudo ser actualizada.");
+                resultArray.add("RESPONSE_CODE", "FAIL");
+                resultArray.add("RESPONSE_MESSAGE", "La orden no pudo ser actualizada.");
+                resultArray.add("RESPONSE_DETAIL", "");
+            }
+
+            return resultArray;
+
+        } catch (SQLException e) {
+            conn.rollback();
+            System.out.println("CancelNewShippingOrderTransaction::Execute> SQLException: " + e.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "SQLException");
+            resultArray.add("RESPONSE_DETAIL", e.getMessage());
+            return resultArray;
+        } catch (Exception ex) {
+            conn.rollback();
+            System.out.println("CancelNewShippingOrderTransaction::Execute> Exception: " + ex.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "Exception");
+            resultArray.add("RESPONSE_DETAIL", ex.getMessage());
+            return resultArray;
+        } finally {
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+            CloseStatements();
+//            System.out.println("<CancelNewShippingOrderTransaction::Execute> exit");
+        }
+    }
+
+    /**
+     * Generates an xmlNodeArray containing parameters for this transaction
+     *
+     * @return xmlNodeArray that contains parameters for the transaction
+     * @exception (none)
+     */
+    @Override
+    public xmlNodeArray GenerateTestParameters() {
+        xmlNodeArray nodeArr = new xmlNodeArray();
+        nodeArr.add("TRANSACTION_CLASS_TO_EXECUTE", "JonesPlasticTransactions.CancelNewShippingOrderTransaction");
+        //update
+        nodeArr.add("idWorkbook", "2");
+
+        return nodeArr;
+
+    }
+
+    /**
+     * The main method for the transaction. Creates a database connection and an
+     * error Array, then executes the transaction and reports any errors
+     *
+     * @param argv argv[0] is an optional configuration file name
+     * @exception (none)
+     */
+    public static void main(String[] argv) {
+        try {
+            CancelNewShippingOrderTransaction transaction = new CancelNewShippingOrderTransaction();
+            SIDWebTransaction resultTransaction = null;
+            xmlNodeArray inputParameterArray = null;
+            //CIMDataBase database = null;
+            System.out.println("Usage: java -classpath ...JonesPlasticTransactions.CancelNewShippingOrderTransaction");
+
+            //<Add Database connection parameter for testing>
+            database = new SIDDataBase("jdbc:mysql://www.sidchihuahua.com:3306/zodiac", "zodiac_admin", "Z0d14c#4");
+
+            transaction.SetSIDDataBase(database);
+            inputParameterArray = transaction.GenerateTestParameters();
+            if (!transaction.IsValidTransaction()) {
+                System.out.println(" CancelNewShippingOrderTransaction contains an invalid transaction type.");
+            } else {
+                if (!transaction.Supports(inputParameterArray)) {
+                    System.out.println(" CancelNewShippingOrderTransaction does not support this list of parameters.");
+                } else {
+                    resultTransaction = database.ExecuteTransaction("JonesPlasticTransactions.CancelNewShippingOrderTransaction", inputParameterArray);
+                    if (resultTransaction == null) {
+                        System.out.println("The transaction's result array is null.");
+                    } else {
+                        if (resultTransaction.GetError() != null) {
+                            resultTransaction.GetError().print();
+                        } else {
+                            if (resultTransaction.GetResultArray() == null) {
+                                System.out.println("CancelNewShippingOrderTransaction - No results were returned.");
+                            } else {
+                                xmlNodeArray array = resultTransaction.GetResultArray();
+                                String str = xmlNodeArray.xmlNodeArray2String(array);
+                                array = xmlNodeArray.string2xmlNodeArray(str);
+                                System.out.println(str);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("CancelNewShippingOrderTransaction::main> caught exception " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}

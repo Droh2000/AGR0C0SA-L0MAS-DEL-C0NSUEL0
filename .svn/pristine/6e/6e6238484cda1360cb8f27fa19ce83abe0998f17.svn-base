@@ -1,0 +1,570 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package AgrocosaTransactions;
+
+import SIDWebEngine.*;
+import java.sql.*;
+import xmlNodeArray.*;
+
+public class CloseDeliveryTransaction extends SIDWebTransaction {
+
+    protected PreparedStatement pstmtDeliveryInfo;
+    protected PreparedStatement pstmtUpdateDeliveryInfo;
+    protected PreparedStatement pstmtInsertDeliveryHistory;
+    protected PreparedStatement pstmtInsertDeliveryHistory1;
+    protected PreparedStatement pstmtInsertDeliveryHistory2;
+    protected PreparedStatement pstmtSelectDeliveryHistoryArrival;
+    protected PreparedStatement pstmtSelectFecha;
+    protected PreparedStatement pstmtSelectInventory;
+    protected PreparedStatement pstmtEditInventory;
+    protected PreparedStatement pstmtDeleteInventory;
+    protected PreparedStatement pstmtUpdateDeliveryInfopickup;
+    protected PreparedStatement pstmtInsertInventoryHistory;
+
+    /**
+     * Default Constructor
+     *
+     * @exception (none)
+     */
+    public CloseDeliveryTransaction() {
+        super();
+        SetTransactionType(SIDWebTransaction.SaveType);
+    }
+
+    /**
+     * Checks to see if the node Array is supported
+     *
+     * @param nodeArray
+     * @return <B>true</B> if the nodeArray is supported. <B>false</B> otherwise
+     * @exception (none)
+     */
+    @Override
+    public boolean Supports(xmlNodeArray nodeArray) {
+
+        //Add tag names as comma separated Strings to the mandatoryTags array
+        String[] mandatoryTags = {
+            "idDelivery",
+            "driverName",
+            "driverTel",
+            "trucking",
+            "trailerType"
+        };
+
+        //Add tag names as comma separated Strings to the optionalTags array
+        String[] optionalTags = {};
+        //Add tag names as comma separated Strings to the mandatorySets array
+        String[] mandatorySets = {};
+        //Add tag names as comma separated Strings to the optionalSetTags array
+        String[] optionalSets = {};
+
+        xmlNodeArray errArray = new xmlNodeArray();
+        for (int i = 0; i < mandatoryTags.length; i++) {
+            if (!nodeArray.existValue(mandatoryTags[i])) {
+                System.out.println("<CloseDeliveryTransaction::Supports> " + mandatoryTags[i] + " Mandatory tag not found or value is empty/null");
+                errArray.add("ERROR", "MANDATORY_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalTags.length; i++) {
+            if (nodeArray.exist(optionalTags[i]) && !nodeArray.existValue(optionalTags[i])) {
+                System.out.println("<CloseDeliveryTransaction::Supports> " + optionalTags[i] + " Optional tag not found or value is empty/null");
+                errArray.add("OPTIONAL_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < mandatorySets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) == null || nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0) {
+                System.out.println("<CloseDeliveryTransaction::Supports> " + mandatorySets[i] + " Mandatory Set not found or value is empty/null");
+                errArray.add("MANDATORY_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalSets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) != null && (nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0)) {
+                System.out.println("<CloseDeliveryTransaction::Supports> " + optionalSets[i] + " Optional Set not found or value is empty/null");
+                errArray.add("OPTIONAL_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prepares the SQL statements to be executed
+     *
+     * @return <B>true</B> for successful preparation; <B>false</B> for
+     * unsuccessful preparation
+     * @exception (none)
+     */
+    @Override
+    public synchronized boolean PrepareStatements() {
+        //Note1 : Use PreparedStatements instead of Statements where ever possible
+        //Note2 : If transaction contains no prepared statements, delete entire function
+        //        Unless there are nested transaction, then Prepare will call those.
+        try {
+            Connection con = this.GetSIDDataBase().GetConnection();
+
+//            pstmtDeliveryInfo = con.prepareStatement("select *, "
+//                    + "date_format(CreationDate,'%d/%m/%Y') as fCreationDate "
+//                    + "from deliveryhistory "
+//                    + "where idDelivery = ? "
+//                    + "and Status  = 'Nueva' ");
+            pstmtUpdateDeliveryInfo = con.prepareStatement("update delivery set "
+                    + "DeliveryDate = Now(), "
+                    + "Active = ?, "// 1. active
+                    + "Line = ?, "// 2. line
+                    + "Status = ?, "//3 status
+                    + "ConfirmQty = ?, "//4 confirm qty
+                    + "Status = ?, "//5 status
+                    + "ModifiedDate = now() "
+                    + "Where idDelivery = ? ");// 6. iddelivery
+
+            pstmtUpdateDeliveryInfopickup = con.prepareStatement("update delivery set "
+                    + "DeliveryDate = Now(), "
+                    + "ConfirmPickup = ?, "// 1. confitmpichup
+                    + "ConfirmTrailer = ?, "// 2. confirmtrailer
+                    + "ConfirmWeight = ?, "// 3. confirmweight
+                    + "Trucking = ?, "// 4. trucking
+                    + "Dock = ?, "// 5. dock
+                    + "DriverName = ?, "// 6. drivername
+                    + "DriverTel = ?, "// 7. drivertel
+                    + "ConfirmTrailerNumber = ? "//8 trailerNumber
+                    + "Where PickupNumber = ? ");// 9. pickup
+
+            pstmtInsertDeliveryHistory = con.prepareStatement("insert into deliveryhistory ( "
+                    + "idDelivery, "
+                    + "ArrivalDate, "
+                    + "Status, "
+                    + "Comments, "
+                    + "InsertDate "
+                    + ") values( "
+                    + "?, "//1 idDelivery
+                    + "now(), " // ArrivalDate
+                    + "?, "//2 Status
+                    + "?, "//3 Comments
+                    + "Now() " //InsertDate
+                    + ")");
+
+            pstmtInsertDeliveryHistory1 = con.prepareStatement("insert into deliveryhistory ( "
+                    + "idDelivery, "
+                    + "ArrivalDate, "
+                    + "Status, "
+                    + "Comments, "
+                    + "InsertDate "
+                    + ") values( "
+                    + "?, "//1 idDelivery
+                    + "now(), " // ArrivalDate
+                    + "?, "//2 Status
+                    + "?, "//3 Comments
+                    + "Now() " //InsertDate
+                    + ")");
+
+            pstmtInsertDeliveryHistory2 = con.prepareStatement("insert into deliveryhistory ( "
+                    + "idDelivery, "
+                    + "DeliveryDate, "
+                    + "ArrivalDate, "
+                    + "Status, "
+                    + "Comments, "
+                    + "InsertDate "
+                    + ") values( "
+                    + "?, "//1 idDelivery
+                    + "now(), " // DeliveryDate
+                    + "?, " //2 ArrivalDate
+                    + "?, "//3 Status
+                    + "?, "//4 Comments
+                    + "Now() " //InsertDate
+                    + ")");
+
+            pstmtSelectDeliveryHistoryArrival = con.prepareStatement("select "
+                    + "coalesce(ArrivalDate,now()) as ArrivalDate "
+                    + "from deliveryhistory "
+                    + "where idDelivery = ? "
+                    + "and status = 'Arrived' ");
+
+            pstmtSelectFecha = con.prepareStatement("select now() as fecha ");
+
+            pstmtSelectInventory = con.prepareStatement("select "
+                    + "coalesce(idWarehouse,0) as id, "
+                    + "coalesce(sum(Quantity),0) as Qty "
+                    + "from warehouse "
+                    + "where Linea = ? "
+                    + "and Product = ? "
+                    + "Group by idWarehouse ");
+
+            pstmtEditInventory = con.prepareStatement("update warehouse "
+                    + "set Quantity = Quantity - ? "
+                    + "where idWarehouse = ? ");
+
+            pstmtDeleteInventory = con.prepareStatement("delete from warehouse "
+                    + "where idWarehouse = ? ");
+
+            pstmtInsertInventoryHistory = con.prepareStatement("INSERT INTO warehousehistory"
+                    + "(ReferenceNumber, "
+                    + "Movement, "
+                    + "Trucking, "
+                    + "Trailer, "
+                    + "Line, "
+                    + "Dock, "
+                    + "DriverName, "
+                    + "Seal, "
+                    + "User, "
+                    + "InsertDate, "
+                    + "Comments,"
+                    + "Product,"
+                    + "Quantity, "
+                    + "Destination)"
+                    + "VALUES("
+                    + "?, " //1. ReferenceNumber
+                    + "'Salida', " //Movement
+                    + "?, " //2. Trucking
+                    + "?, " //3. Trailer
+                    + "?, " //4. Line
+                    + "?, " //5. Dock
+                    + "?, " //6. DriverName
+                    + "?, " //7. Sello                    
+                    + "?, " //8. User
+                    + "now(), " //InsertDate
+                    + "?, " //9. Comments
+                    + "?, " //10. Producto
+                    + "?, " //11. Quantity
+                    + "? " //12. Destiny
+                    + ")");
+
+//            this.addPreparedStatement(pstmtDeliveryInfo);
+            this.addPreparedStatement(pstmtUpdateDeliveryInfo);
+            this.addPreparedStatement(pstmtInsertDeliveryHistory);
+            this.addPreparedStatement(pstmtInsertDeliveryHistory1);
+            this.addPreparedStatement(pstmtInsertDeliveryHistory2);
+            this.addPreparedStatement(pstmtSelectDeliveryHistoryArrival);
+            this.addPreparedStatement(pstmtSelectFecha);
+            this.addPreparedStatement(pstmtSelectInventory);
+            this.addPreparedStatement(pstmtEditInventory);
+            this.addPreparedStatement(pstmtDeleteInventory);
+            this.addPreparedStatement(pstmtUpdateDeliveryInfopickup);
+            this.addPreparedStatement(pstmtInsertInventoryHistory);
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("CloseDeliveryTransaction::PrepareStatements> SQLException: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * executes sql statements using input arguments and returns result
+     *
+     * @return valid node array if successful else null
+     * @exception SQLException if sql error occurs
+     * @exception Exception if non sql error occurs
+     */
+    @Override
+    public synchronized xmlNodeArray Execute() throws SQLException, Exception {
+        Connection conn = null;
+        xmlNodeArray resultArray = null;
+        ResultSet rset = null;
+        int rowsAffected = 0;
+        int idDelivery = 0;
+        int active = 0;
+        String driverName = "";
+        String driverTel = "";
+        String trailerType = "";
+        String trailerNumber = "";
+        String trucking = "";
+        String comments = "";
+        String registrar = "";
+        double quantity = 0;
+        double weight = 0;
+        String uom = "";
+        String creationDate = "";
+        boolean boolSaveHistory = false;
+        String pickupNumber = "";
+        String pickupNumberOriginal = "";
+        String peso = "";
+        String dock = "";
+        String line = "";
+        String fechaLlegada = "";
+        String producto = "";
+        String destino = "";
+        String mensajeError = "FAIL something is wrong with the delivery process.";
+        int idUser = 1;
+
+        try {
+
+            conn = this.GetSIDDataBase().GetConnection();
+            conn.setAutoCommit(false);
+            resultArray = new xmlNodeArray();
+
+            if (GetNodeArray().existValue("idUser")) {
+                idUser = GetNodeArray().find("idUser").getIntValue();
+            }
+
+            idDelivery = GetNodeArray().find("idDelivery").getIntValue();
+            driverName = GetNodeArray().find("driverName").getStringValue();
+            driverTel = GetNodeArray().find("driverTel").getStringValue();
+            trailerType = GetNodeArray().find("trailerType").getStringValue();
+            trailerNumber = GetNodeArray().find("trailerNumber").getStringValue();
+            trucking = GetNodeArray().find("trucking").getStringValue();
+            comments = GetNodeArray().find("comments").getStringValue();
+            peso = GetNodeArray().find("weight").getStringValue();
+            quantity = GetNodeArray().find("qtyinput").getDoubleValue();
+            pickupNumber = GetNodeArray().find("pickup").getStringValue();
+            pickupNumberOriginal = GetNodeArray().find("pickuporiginal").getStringValue();
+            dock = GetNodeArray().find("dock").getStringValue();
+            line = GetNodeArray().find("line").getStringValue();
+            registrar = GetNodeArray().find("registrar").getStringValue();
+            producto = GetNodeArray().find("producto").getStringValue();
+            destino = GetNodeArray().find("destino").getStringValue();
+
+            pstmtSelectDeliveryHistoryArrival.setInt(1, idDelivery);
+            rset = pstmtSelectDeliveryHistoryArrival.executeQuery();
+            if (rset.next()) {
+                fechaLlegada = rset.getString("ArrivalDate");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            if (fechaLlegada.equals("") && registrar.equals("Loaded")) {
+                rset = pstmtSelectFecha.executeQuery();
+                if (rset.next()) {
+                    fechaLlegada = rset.getString("fecha");
+                }
+                if (rset != null) {
+                    rset.close();
+                    rset = null;
+                }
+            }
+
+            if (!registrar.equals("Loaded")) {
+                active = 1;
+            }
+
+            pstmtUpdateDeliveryInfopickup.setString(1, pickupNumber);
+            pstmtUpdateDeliveryInfopickup.setString(2, trailerType);
+            pstmtUpdateDeliveryInfopickup.setString(3, peso);
+            pstmtUpdateDeliveryInfopickup.setString(4, trucking);
+            pstmtUpdateDeliveryInfopickup.setString(5, dock);
+            pstmtUpdateDeliveryInfopickup.setString(6, driverName);
+            pstmtUpdateDeliveryInfopickup.setString(7, driverTel);
+            pstmtUpdateDeliveryInfopickup.setString(8, trailerNumber);
+            pstmtUpdateDeliveryInfopickup.setString(9, pickupNumberOriginal);
+            rowsAffected = pstmtUpdateDeliveryInfopickup.executeUpdate();
+
+            pstmtUpdateDeliveryInfo.setInt(1, active);
+            pstmtUpdateDeliveryInfo.setString(2, line);
+            pstmtUpdateDeliveryInfo.setString(3, registrar);
+            pstmtUpdateDeliveryInfo.setDouble(4, quantity);
+            pstmtUpdateDeliveryInfo.setString(5, registrar);
+            pstmtUpdateDeliveryInfo.setInt(6, idDelivery);
+            rowsAffected = pstmtUpdateDeliveryInfo.executeUpdate();
+            if (rowsAffected > 0) {
+                boolSaveHistory = true;
+            }
+
+            if (boolSaveHistory) {
+
+                switch (registrar) {
+                    case "Arrived":
+                        pstmtInsertDeliveryHistory.setInt(1, idDelivery);
+                        pstmtInsertDeliveryHistory.setString(2, registrar);
+                        pstmtInsertDeliveryHistory.setString(3, comments);
+                        rowsAffected = pstmtInsertDeliveryHistory.executeUpdate();
+                        break;
+                    case "Loading":
+                        pstmtInsertDeliveryHistory1.setInt(1, idDelivery);
+                        pstmtInsertDeliveryHistory1.setString(2, registrar);
+                        pstmtInsertDeliveryHistory1.setString(3, comments);
+                        rowsAffected = pstmtInsertDeliveryHistory1.executeUpdate();
+                        break;
+                    case "Loaded":
+                        pstmtInsertDeliveryHistory2.setInt(1, idDelivery);
+                        pstmtInsertDeliveryHistory2.setString(2, fechaLlegada);
+                        pstmtInsertDeliveryHistory2.setString(3, registrar);
+                        pstmtInsertDeliveryHistory2.setString(4, comments);
+                        rowsAffected = pstmtInsertDeliveryHistory2.executeUpdate();
+
+//                        //Descontar inventario
+//                        if (producto.contains("25")) {
+//                            quantity = quantity / 90;
+//                        } else if (producto.contains("40")) {
+//                            quantity = quantity / 42;
+//                        } else if (producto.contains("SS")) {
+//
+//                        } else {
+//                            quantity = quantity / 45;
+//                        }
+//
+//                        int idInventario = 0;
+//                        double totalInventario = 0;
+//                        pstmtSelectInventory.setString(1, line);
+//                        pstmtSelectInventory.setString(2, producto);
+//                        rset = pstmtSelectInventory.executeQuery();
+//                        if (rset.next()) {
+//                            idInventario = rset.getInt("id");
+//                            totalInventario = rset.getDouble("Qty");
+//                        }
+//
+//                        if (totalInventario > 0) {
+//                            //Restar Inventario inventario
+//
+//                            //Validar si se elimina de inventario o se resta
+//                            if (totalInventario - quantity > 0) {
+//                                //Restar
+//                                pstmtEditInventory.setDouble(1, quantity);
+//                                pstmtEditInventory.setInt(2, idInventario);
+//                                pstmtEditInventory.executeUpdate();
+//                            } else if (totalInventario - quantity == 0) {
+//                                //Eliminar
+//                                pstmtDeleteInventory.setInt(1, idInventario);
+//                                pstmtDeleteInventory.executeUpdate();
+//                            } else {
+//                                conn.rollback();
+//                                rowsAffected = 0;
+//                                mensajeError = "There is not product " + producto + " in line : " + line;
+//                            }
+//
+//                            //Insertar historial inventario
+//                            pstmtInsertInventoryHistory.setString(1, pickupNumber);
+//                            pstmtInsertInventoryHistory.setString(2, trucking);
+//                            pstmtInsertInventoryHistory.setString(3, trailerNumber);
+//                            pstmtInsertInventoryHistory.setString(4, line);
+//                            pstmtInsertInventoryHistory.setString(5, dock);
+//                            pstmtInsertInventoryHistory.setString(6, driverName);
+//                            pstmtInsertInventoryHistory.setString(7, "");
+//                            pstmtInsertInventoryHistory.setInt(8, idUser);
+//                            pstmtInsertInventoryHistory.setString(9, comments);
+//                            pstmtInsertInventoryHistory.setString(10, producto);
+//                            pstmtInsertInventoryHistory.setDouble(11, quantity);
+//                            pstmtInsertInventoryHistory.setString(12, destino);
+//                            rowsAffected = pstmtInsertInventoryHistory.executeUpdate();
+//
+//                        } else {
+//                            //No hay inventario en esa linea
+//                            conn.rollback();
+////                            resultArray.add("error", "No hay inventario en esa linea.");
+////                            resultArray.add("RESPONSE_CODE", "FAIL");
+////                            resultArray.add("RESPONSE_MESSAGE", "No hay inventario en esa linea.");
+////                            resultArray.add("RESPONSE_DETAIL", "");
+//                            rowsAffected = 0;
+//                            mensajeError = "There is not product " + producto + " in line : " + line;
+//                        }
+
+                        break;
+                }
+
+                if (rowsAffected > 0) {
+                    conn.commit();
+                    resultArray.add("RESPONSE_CODE", "PASS");
+                    resultArray.add("RESPONSE_MESSAGE", "Delivery has been processed succesfully");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                } else {
+                    conn.rollback();
+                    resultArray.add("error", "FAIL something is wrong with the delivery process.");
+                    resultArray.add("RESPONSE_CODE", "FAIL");
+                    resultArray.add("RESPONSE_MESSAGE", mensajeError);
+                    resultArray.add("RESPONSE_DETAIL", "");
+                }
+
+            }
+
+            return resultArray;
+        } catch (SQLException e) {
+            conn.rollback();
+            System.out.println("CloseDeliveryTransaction::Execute> SQLException: " + e.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "SQLException:" + e.getMessage());
+            resultArray.add("RESPONSE_DETAIL", e.getMessage());
+            return resultArray;
+        } catch (Exception ex) {
+            conn.rollback();
+            System.out.println("CloseDeliveryTransaction::Execute> Exception: " + ex.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "Exception:" + ex.getMessage());
+            resultArray.add("RESPONSE_DETAIL", ex.getMessage());
+            return resultArray;
+        } finally {
+            CloseStatements();
+//            System.out.println("<CloseDeliveryTransaction::Execute> exit");
+        }
+    }
+
+    /**
+     * Generates an xmlNodeArray containing parameters for this transaction
+     *
+     * @return xmlNodeArray that contains parameters for the transaction
+     * @exception (none)
+     */
+    @Override
+    public xmlNodeArray GenerateTestParameters() {
+        xmlNodeArray nodeArr = new xmlNodeArray();
+        nodeArr.add("TRANSACTION_CLASS_TO_EXECUTE", "JonesPlasticTransactions.CloseDeliveryTransaction");
+
+        return nodeArr;
+
+    }
+
+    /**
+     * The main method for the transaction. Creates a database connection and an
+     * error Array, then executes the transaction and reports any errors
+     *
+     * @param argv argv[0] is an optional configuration file name
+     * @exception (none)
+     */
+    public static void main(String[] argv) {
+        try {
+            CloseDeliveryTransaction transaction = new CloseDeliveryTransaction();
+            SIDWebTransaction resultTransaction = null;
+            xmlNodeArray inputParameterArray = null;
+            //CIMDataBase database = null;
+            System.out.println("Usage: java -classpath ...JonesPlasticTransactions.CloseDeliveryTransaction");
+
+            //<Add Database connection parameter for testing>
+            database = new SIDDataBase("jdbc:mysql://www.sidchihuahua.com:3306/zodiac", "zodiac_admin", "Z0d14c#4");
+
+            transaction.SetSIDDataBase(database);
+            inputParameterArray = transaction.GenerateTestParameters();
+            if (!transaction.IsValidTransaction()) {
+                System.out.println(" CloseDeliveryTransaction contains an invalid transaction type.");
+            } else {
+                if (!transaction.Supports(inputParameterArray)) {
+                    System.out.println(" CloseDeliveryTransaction does not support this list of parameters.");
+                } else {
+                    resultTransaction = database.ExecuteTransaction("JonesPlasticTransactions.CloseDeliveryTransaction", inputParameterArray);
+                    if (resultTransaction == null) {
+                        System.out.println("The transaction's result array is null.");
+                    } else {
+                        if (resultTransaction.GetError() != null) {
+                            resultTransaction.GetError().print();
+                        } else {
+                            if (resultTransaction.GetResultArray() == null) {
+                                System.out.println("CloseDeliveryTransaction - No results were returned.");
+                            } else {
+                                xmlNodeArray array = resultTransaction.GetResultArray();
+                                String str = xmlNodeArray.xmlNodeArray2String(array);
+                                array = xmlNodeArray.string2xmlNodeArray(str);
+                                System.out.println(str);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("CloseDeliveryTransaction::main> caught exception " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}

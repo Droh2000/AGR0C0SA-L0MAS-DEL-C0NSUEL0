@@ -1,0 +1,167 @@
+<%@ taglib uri="http://displaytag.sf.net" prefix="display"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
+
+<!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+<!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+<![endif]-->
+
+<script src="../plugins/bootstrap-duallistbox/jquery.bootstrap-duallistbox.min.js"></script>
+<link rel="stylesheet" type="text/css" href="../plugins/bootstrap-duallistbox/bootstrap-duallistbox.css">
+<script type="text/javascript">
+    $(function () {
+        $("#btnBack").click(function () {
+            $("#formBack").submit();
+        });
+        $("#btnSubmit").click(function () {
+            var x = $("#duallistbox").val();
+            if (!x) {
+                x = "empty";
+            }
+            $("#selectedCropType").val(x);
+            $("#saveForm").submit();
+        });
+    });
+
+</script>
+<!-- Content Wrapper. Contains page content -->
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <section class="content-header">
+        <h1>
+            Cultivos 
+            <small>Asignación de Agroquimicos en Cultivos</small>
+        </h1>
+        <ol class="breadcrumb">
+            <li><a href="#"><i class="fa fa-caret-right"></i> Configuracion</a></li>
+            <li class="active">Aqui</li>
+        </ol>
+    </section>
+
+    <!-- Main content -->
+    <section class="content">
+
+        <c:choose>
+            <c:when test="${requestScope.RESPONSE_CODE == 'PASS'}">                    
+                <c:if test="${requestScope.RESPONSE_MESSAGE ne 'OK'}">
+
+
+                    <div class="alert alert-success alert-dismissable">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                        <h4>	<i class="icon fa fa-check"></i> OK</h4>
+                        <c:out value="${requestScope.RESPONSE_MESSAGE}" /><br />
+                        <c:out value="${requestScope.RESPONSE_DETAIL}" />
+                    </div>
+                </c:if>
+            </c:when>
+            <c:when test="${requestScope.RESPONSE_CODE == 'FAIL'}">
+                <div class="alert alert-danger alert-dismissable">
+                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                    <h4><i class="icon fa fa-ban"></i> Error !</h4>
+                    <c:out value="${requestScope.RESPONSE_MESSAGE}" /><br />
+                    <c:out value="${requestScope.RESPONSE_DETAIL}" />
+                </div>
+
+            </c:when>
+        </c:choose>
+
+        <form name="saveForm" id="saveForm"  method="POST" action="addAgrochemicalCropType.do">
+            <div class="box box-success">
+                <div class="box-header with-border">
+                    <h3 class="box-title">Cultivo</h3>
+                </div>
+                <div class="box-body" id="info" > 
+                    <div class="row"> 
+                        <div class="col-md-7">
+
+                            <div class="box-body box-profile">
+                                <h3 class="profile-username text-center">${requestScope.AgrochemicalName}</h3>
+
+                                <ul class="list-group list-group-unbordered">
+                                    <li class="list-group-item">
+                                        <b>Nombre de Agroquimico</b> <a class="pull-right">${requestScope.AgrochemicalName}</a>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <b>Casa Comercial</b> <a class="pull-right">${requestScope.Brand}</a>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <b>Ingrediente Activo</b> <a class="pull-right">${requestScope.ActiveIngredient}</a>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <b>Dosis</b> <a class="pull-right">${requestScope.Dose}</a>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <b>Unidad de Medida</b> <a class="pull-right">${requestScope.UOM}</a>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <b>Tipo de Agroquimico</b> <a class="pull-right">${requestScope.AgrochemicalType}</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+
+                    </div>
+
+
+                    <div class="row"> 
+                        <div class="col-md-7"> 
+                            <select multiple="multiple" size="10" name="duallistbox" id="duallistbox" class="service"> 
+                                <c:forEach items="${CropTypeAvailable_Table}" var="row" varStatus="status">
+                                    <option value="${row.CropTypeName}">${row.CropTypeName}</option> 
+                                </c:forEach>
+                                <c:forEach items="${AgrochemicalCropType_Table}" var="row2" varStatus="status">
+                                    <option value="${row2.CropTypeName}" selected="selected">${row2.CropTypeName}</option> 
+                                </c:forEach>
+                            </select> 
+                            <script>
+                                var demo2 = $('.service').bootstrapDualListbox({
+                                    nonSelectedListLabel: 'Cultivos Disponibles',
+                                    selectedListLabel: 'Cultivos Seleccionados',
+                                    preserveSelectionOnMove: 'moved',
+                                    moveOnSelect: false,
+                                    infoText: false
+                                            //                                nonSelectedFilter: 'ion ([7-9]|[1][0-2])'
+                                });
+                            </script> 
+                        </div> 
+                    </div> 
+                </div>
+                <div class="box-footer">
+                    <div class="form-group">
+                        <button type="button" id="btnBack" class="btn btn-primary pull-left"><i class="fa fa-backward"></i> Regresar</button>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        <button type="button" id="btnSubmit" class="btn btn-primary"><i class="fa fa-save"></i> Guardar</button>
+                        <input type="hidden" name="Action" id="Action"  value="saveAgrochemicalCropType"/>
+                        <input type="hidden" name="idAgrochemical" id="idAgrochemical" value="${requestScope.idAgrochemical}"/>
+                        <input type="hidden" name="selectedCropType" id="selectedCropType" value=""/>
+                    </div><!-- /.form-group -->                        
+                </div>
+            </div>
+        </form>
+
+
+        <div class="hide">
+            <form name="formBack" id="formBack" action="agrochemicalManagement.do" method="post"></form>                        
+        </div>
+
+        <c:if test="false">
+            <c:forEach items='${requestScope}' var='p'>
+                <ul>
+                    <%-- Display the key of the current item, which
+                         represents the parameter name --%>
+                    <li>Parameter Name: <c:out value='${p.key}'/></li>
+
+                    <%-- Display the value of the current item, which
+                         represents the parameter value --%>
+                    <li>Parameter Value: <c:out value='${p.value}'/></li>
+                </ul>
+            </c:forEach>
+        </c:if>
+
+    </section><!-- /.content -->
+</div><!-- /.content-wrapper -->

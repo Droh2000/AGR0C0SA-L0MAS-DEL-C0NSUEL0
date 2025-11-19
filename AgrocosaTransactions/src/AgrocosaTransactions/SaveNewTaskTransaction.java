@@ -1,0 +1,875 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package AgrocosaTransactions;
+
+import SIDWebEngine.*;
+import java.sql.*;
+import xmlNodeArray.*;
+
+public class SaveNewTaskTransaction extends SIDWebTransaction {
+
+    protected PreparedStatement pstmtInsertFarmingTask;
+    protected PreparedStatement pstmtInsertApplicationTask;
+    protected PreparedStatement pstmtInsertPickingTask;
+    protected PreparedStatement pstmtInsertJournalTask;
+    protected PreparedStatement pstmtInsertIrrigationTask;
+    protected PreparedStatement pstmtInsertTaskCrop;
+    protected PreparedStatement pstmtInsertTaskHistory;
+    protected PreparedStatement pstmtInsertTaskLabor;
+    protected PreparedStatement pstmtInsertTaskSection;
+    protected PreparedStatement pstmtCampInfo;
+    protected PreparedStatement pstmtCampSection;
+    protected PreparedStatement pstmtCrop;
+    protected PreparedStatement pstmtUser;
+    protected PreparedStatement pstmtTaskTypeUser;
+
+    /**
+     * Default Constructor
+     *
+     * @exception (none)
+     */
+    public SaveNewTaskTransaction() {
+        super();
+        SetTransactionType(SIDWebTransaction.SaveType);
+    }
+
+    /**
+     * Checks to see if the node Array is supported
+     *
+     * @param nodeArray
+     * @return <B>true</B> if the nodeArray is supported. <B>false</B> otherwise
+     * @exception (none)
+     */
+    @Override
+    public boolean Supports(xmlNodeArray nodeArray) {
+
+        //Add tag names as comma separated Strings to the mandatoryTags array
+        String[] mandatoryTags = {
+            "idUser",
+            "taskType",
+            "Camp"
+        };
+
+        //Add tag names as comma separated Strings to the optionalTags array
+        String[] optionalTags = {};
+        //Add tag names as comma separated Strings to the mandatorySets array
+        String[] mandatorySets = {};
+        //Add tag names as comma separated Strings to the optionalSetTags array
+        String[] optionalSets = {};
+
+        xmlNodeArray errArray = new xmlNodeArray();
+        for (int i = 0; i < mandatoryTags.length; i++) {
+            if (!nodeArray.existValue(mandatoryTags[i])) {
+                System.out.println("<SaveSectionCropTransaction::Supports> " + mandatoryTags[i] + " Mandatory tag not found or value is empty/null");
+                errArray.add("ERROR", "MANDATORY_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalTags.length; i++) {
+            if (nodeArray.exist(optionalTags[i]) && !nodeArray.existValue(optionalTags[i])) {
+                System.out.println("<SaveSectionCropTransaction::Supports> " + optionalTags[i] + " Optional tag not found or value is empty/null");
+                errArray.add("OPTIONAL_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < mandatorySets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) == null || nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0) {
+                System.out.println("<SaveSectionCropTransaction::Supports> " + mandatorySets[i] + " Mandatory Set not found or value is empty/null");
+                errArray.add("MANDATORY_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalSets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) != null && (nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0)) {
+                System.out.println("<SaveSectionCropTransaction::Supports> " + optionalSets[i] + " Optional Set not found or value is empty/null");
+                errArray.add("OPTIONAL_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prepares the SQL statements to be executed
+     *
+     * @return <B>true</B> for successful preparation; <B>false</B> for
+     * unsuccessful preparation
+     * @exception (none)
+     */
+    @Override
+    public synchronized boolean PrepareStatements() {
+        //Note1 : Use PreparedStatements instead of Statements where ever possible
+        //Note2 : If transaction contains no prepared statements, delete entire function
+        //        Unless there are nested transaction, then Prepare will call those.
+        try {
+            Connection con = this.GetSIDDataBase().GetConnection();
+
+            pstmtInsertFarmingTask = con.prepareStatement("Insert into task ( "
+                    + "TaskType, "
+                    + "idCamp, "
+                    + "TaskDate, "
+                    + "Comments, "
+                    + "Status, "
+                    + "idUser, "
+                    + "InsertDate, "
+                    + "ModifiedDate, "
+                    + "Active, "
+                    + "idSupervisor, "
+                    + "Tractor, "
+                    + "Tool, "
+                    + "Operator "
+                    + ")Values( "
+                    + "'Labranza', " //Task Type
+                    + "?, " //1 idCamp
+                    + "STR_TO_DATE(?,'%d/%m/%Y'), " //2 TaskDate
+                    + "?, "//3 Comments
+                    + "'Nueva', "// Status
+                    + "?, "//4 idUser
+                    + "Now(), " //  InsertDate
+                    + "Now(), " //  ModifiedDate
+                    + "1, " //  Active                    
+                    + "?, "// 5 idSupervisor
+                    + "?, "// 6 Tractor
+                    + "?, "// 7 Tool
+                    + "? "// 8 Operator
+                    + ")", Statement.RETURN_GENERATED_KEYS);
+
+            pstmtInsertApplicationTask = con.prepareStatement("Insert into task ( "
+                    + "TaskType, "
+                    + "idCamp, "
+                    + "TaskDate, "
+                    + "Temperature, "
+                    + "Comments, "
+                    + "Status, "
+                    + "idUser, "
+                    + "InsertDate, "
+                    + "ModifiedDate, "
+                    + "Active, "
+                    + "idSupervisor "
+                    + ")Values( "
+                    + "'Aplicacion Foliar', " //Task Type
+                    + "?, " //1 idCamp
+                    + "STR_TO_DATE(?,'%d/%m/%Y'), " //2 TaskDate
+                    + "?, "//3 Temperature
+                    + "?, "//4 Comments
+                    + "'Nueva', "// Status
+                    + "?, "//5 idUser
+                    + "Now(), " //  InsertDate
+                    + "Now(), " //  ModifiedDate
+                    + "1, " //  Active                    
+                    + "? "// 6 dSupervisor
+                    + ")", Statement.RETURN_GENERATED_KEYS);
+
+            pstmtInsertPickingTask = con.prepareStatement("Insert into task ( "
+                    + "TaskType, "
+                    + "idCamp, "
+                    + "TaskDate, "
+                    + "Comments, "
+                    + "Status, "
+                    + "idUser, "
+                    + "InsertDate, "
+                    + "ModifiedDate, "
+                    + "Active, "
+                    + "idSupervisor "
+                    + ")Values( "
+                    + "'Cosecha', " //Task Type
+                    + "?, " //1 idCamp
+                    + "STR_TO_DATE(?,'%d/%m/%Y'), " //2 TaskDate
+                    + "?, "//3 Comments
+                    + "'Nueva', "// Status
+                    + "?, "//4 idUser
+                    + "Now(), " //  InsertDate
+                    + "Now(), " //  ModifiedDate
+                    + "1, " //  Active                    
+                    + "? "// 5 dSupervisor
+                    + ")", Statement.RETURN_GENERATED_KEYS);
+
+            pstmtInsertJournalTask = con.prepareStatement("Insert into task ( "
+                    + "TaskType, "
+                    + "idCamp, "
+                    + "TaskDate, "
+                    + "Comments, "
+                    + "Status, "
+                    + "Manager, "
+                    + "WorkersQty, "
+                    + "idUser, "
+                    + "InsertDate, "
+                    + "ModifiedDate, "
+                    + "Active, "
+                    + "idSupervisor "
+                    + ")Values( "
+                    + "'Jornal', " //Task Type
+                    + "?, " //1 idCamp
+                    + "STR_TO_DATE(?,'%d/%m/%Y'), " //2 TaskDate
+                    + "?, "//3 Comments
+                    + "'Nueva', "// Status
+                    + "?, " //4 Manager
+                    + "?, " //5  Workers Qty
+                    + "?, "//6 idUser
+                    + "Now(), " //  InsertDate
+                    + "Now(), " //  ModifiedDate
+                    + "1, " //  Active                    
+                    + "? "// 7 dSupervisor
+                    + ")", Statement.RETURN_GENERATED_KEYS);
+
+            pstmtInsertIrrigationTask = con.prepareStatement("Insert into task ( "
+                    + "TaskType, "
+                    + "idCamp, "
+                    + "TaskDate, "
+                    + "Comments, "
+                    + "Status, "
+                    + "Pressure, "
+                    + "Formula, "
+                    + "idUser, "
+                    + "InsertDate, "
+                    + "ModifiedDate, "
+                    + "Active, "
+                    + "idSupervisor "
+                    + ")Values( "
+                    + "'Riego', " //Task Type
+                    + "?, " //1 idCamp
+                    + "STR_TO_DATE(?,'%d/%m/%Y'), " //2 TaskDate
+                    + "?, "//3 Comments
+                    + "'Nueva', "// Status
+                    + "?, " //4 Pressure
+                    + "?, " //5  Formula
+                    + "?, "//6 idUser
+                    + "Now(), " //  InsertDate
+                    + "Now(), " //  ModifiedDate
+                    + "1, " //  Active                    
+                    + "? "// 7 idSupervisor
+                    + ")", Statement.RETURN_GENERATED_KEYS);
+
+            pstmtInsertTaskCrop = con.prepareStatement("insert into taskcrop ( "
+                    + "idTask, "
+                    + "CropTypeName, "
+                    + "CropName, "
+                    + "idUser, "
+                    + "InsertDate, "
+                    + "ModifiedDate, "
+                    + "Active "
+                    + ") values( "
+                    + "?, "//1 idTask
+                    + "?, "//2 CropTypeName
+                    + "?, "//3 CropName
+                    + "?, "//4 idUser
+                    + "Now(), "
+                    + "Now(), "
+                    + "1 "
+                    + ")");
+
+            pstmtInsertTaskHistory = con.prepareStatement("insert into taskhistory ( "
+                    + "idTask, "
+                    + "TaskType, "
+                    + "CampName, "
+                    + "SectionName, "
+                    + "LaborTypeName, "
+                    + "SectionCrop, "
+                    + "TaskDate, "
+                    + "Status, "
+                    + "Comments, "
+                    + "User, "
+                    + "InsertDate, "
+                    + "SupervisorName, "
+                    + "Tractor, "
+                    + "Tool, "
+                    + "Operator "
+                    + ") values( "
+                    + "?, "//1 idTask
+                    + "?, "//2 TaskTYpe
+                    + "?, " //3 CAmpName
+                    + "?, " //4 SectionName
+                    + "?, " //5 LaborTypeName
+                    + "?, " //6 SectionCrop
+                    + "STR_TO_DATE(?,'%d/%m/%Y'), " //7 TaskDate
+                    + "?, "//8 Status
+                    + "?, "//8 Comments
+                    + "?, "//10 User
+                    + "Now(), "
+                    + "?, " //11 Supervisor Name
+                    + "?, " //12 Tractor
+                    + "?, " //13 Tool
+                    + "? " //14 Operator
+                    + ")");
+
+            pstmtInsertTaskLabor = con.prepareStatement("insert into tasklabor ( "
+                    + "idTask, "
+                    + "LaborTypeName, "
+                    + "idUser, "
+                    + "InsertDate, "
+                    + "ModifiedDate, "
+                    + "Active "
+                    + " )values( "
+                    + "?, " //1 idTask
+                    + "?, " //2 LaborTypeName
+                    + "?, " //3 idUser
+                    + "Now(), "
+                    + "Now(), "
+                    + "1 "
+                    + ")");
+
+            pstmtInsertTaskSection = con.prepareStatement("insert into tasksection ( "
+                    + "idTask, "
+                    + "SectionName, "
+                    + "Area, "
+                    + "LandTypeName, "
+                    + "PipeType, "
+                    + "idUser, "
+                    + "InsertDate, "
+                    + "ModifiedDate, "
+                    + "Active "
+                    + ")Values( "
+                    + "?, "//1 idTask
+                    + "?, "//2 SectionNAme
+                    + "?, "//3 Area
+                    + "?, "//4 LandType
+                    + "?, "//5 PipeType
+                    + "?, "//6 idUser
+                    + "Now(), "
+                    + "Now(), "
+                    + "1 "
+                    + ")");
+
+            pstmtCampInfo = con.prepareStatement("select camp.idCamp "
+                    + "from campinfo inner join "
+                    + "camp on camp.idCamp = campinfo.idCamp "
+                    + "where camp.CampName = ? "
+                    + "and camp.Active = 1 "
+                    + "and campinfo.Active = 1");
+
+            pstmtCampSection = con.prepareStatement("select campsection.SectionName, "
+                    + "campsection.Area, "
+                    + "landtype.LandTypeName, "
+                    + "pipetype.PipeTypeName "
+                    + "from campsection inner join "
+                    + "landtype on landtype.idLandType = campsection.idLandType inner join "
+                    + "pipetype on pipetype.idPipeType = campsection.idPipeType "
+                    + "Where campsection.SectionName = ? ");
+
+            pstmtCrop = con.prepareStatement("select crop.CropName, "
+                    + "croptype.CropTypeName "
+                    + "from crop inner join "
+                    + "croptype on croptype.idCropType = crop.idCropType "
+                    + "where crop.CropName = ? ");
+
+            pstmtUser = con.prepareStatement("select concat(FirstName,' ',LastName) User "
+                    + "from user "
+                    + "where idUser = ? ");
+
+            pstmtTaskTypeUser = con.prepareStatement("select "
+                    + "coalesce(tasktypeuser.idUser,0) as idUser, "
+                    + "concat(user.FirstName,' ',user.LastName) User "
+                    + "from tasktypeuser inner join "
+                    + "tasktype on tasktype.idTaskType = tasktypeuser.idTaskType inner join "
+                    + "user on user.idUser = tasktypeuser.idUser "
+                    + "Where tasktype.Active = 1 "
+                    + "and tasktype.TaskTypeName = ?");
+
+            this.addPreparedStatement(pstmtInsertFarmingTask);
+            this.addPreparedStatement(pstmtInsertApplicationTask);
+            this.addPreparedStatement(pstmtInsertPickingTask);
+            this.addPreparedStatement(pstmtInsertJournalTask);
+            this.addPreparedStatement(pstmtInsertIrrigationTask);
+            this.addPreparedStatement(pstmtInsertTaskCrop);
+            this.addPreparedStatement(pstmtInsertTaskHistory);
+            this.addPreparedStatement(pstmtInsertTaskLabor);
+            this.addPreparedStatement(pstmtInsertTaskSection);
+            this.addPreparedStatement(pstmtCampInfo);
+            this.addPreparedStatement(pstmtCampSection);
+            this.addPreparedStatement(pstmtCrop);
+            this.addPreparedStatement(pstmtUser);
+            this.addPreparedStatement(pstmtTaskTypeUser);
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("SaveSectionCropTransaction::PrepareStatements> SQLException: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * executes sql statements using input arguments and returns result
+     *
+     * @return valid node array if successful else null
+     * @exception SQLException if sql error occurs
+     * @exception Exception if non sql error occurs
+     */
+    @Override
+    public synchronized xmlNodeArray Execute() throws SQLException, Exception {
+        Connection conn = null;
+        xmlNodeArray resultArray = null;
+        ResultSet rset = null;
+        int rowsAffected = 0;
+        int idUser = 0;
+        String userName = "";
+        String camp = null;
+        String taskType = "";
+        boolean boolSaveSection = false;
+        boolean boolSaveLabor = false;
+        boolean boolSaveCrop = false;
+        boolean boolSaveHistory = false;
+        int idTask = 0;
+        String selectedSection = "";
+        String selectedLabor = "";
+        String selectedCrop = "";
+        String taskDate = "";
+        String temperature = "";
+        String comments = "";
+        int idCamp = 0;
+        int idSupervisor = 0;
+        String supervisorName = "";
+        String manager = "";
+        int workersQty = 0;
+        String pressure = "";
+        String formula = "";
+        String area = "";
+        String landType = "";
+        String pipeType = "";
+        String cropTypeName = "";
+        String tractor = "";
+        String tool = "";
+        String operator = "";
+        String taskTypeSaved = "";
+
+        try {
+
+            conn = this.GetSIDDataBase().GetConnection();
+            conn.setAutoCommit(false);
+            resultArray = new xmlNodeArray();
+
+            idUser = GetNodeArray().find("idUser").getIntValue();
+            camp = GetNodeArray().find("Camp").getStringValue();
+            taskType = GetNodeArray().find("taskType").getStringValue();
+            taskDate = GetNodeArray().find("taskDate").getStringValue();
+
+            pstmtUser.setInt(1, idUser);
+            rset = pstmtUser.executeQuery();
+            if (rset.next()) {
+                userName = rset.getString("User");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            pstmtCampInfo.setString(1, camp);
+            rset = pstmtCampInfo.executeQuery();
+            if (rset.next()) {
+                idCamp = rset.getInt("idCamp");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            switch (taskType) {
+                case "Farming":
+                    taskTypeSaved = "Labranza";
+                    break;
+                case "Application":
+                    taskTypeSaved = "Aplicacion Foliar";
+                    break;
+                case "Picking":
+                    taskTypeSaved = "Cosecha";
+                    break;
+                case "Journal":
+                    taskTypeSaved = "Jornal";
+                    break;
+                case "Irrigation":
+                    taskTypeSaved = "Riego";
+                    break;
+            }
+
+            //task type user 
+            pstmtTaskTypeUser.setString(1, taskTypeSaved);
+            rset = pstmtTaskTypeUser.executeQuery();
+            if (rset.next()) {
+                idSupervisor = rset.getInt("idUser");
+                supervisorName = rset.getString("User");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            //validate
+            if (idSupervisor <= 0) {
+                conn.rollback();
+                resultArray.add("error", "La tarea no tiene asignada un supervisor.");
+                resultArray.add("RESPONSE_CODE", "FAIL");
+                resultArray.add("RESPONSE_MESSAGE", "Por favor asigne un supervisor a esta tarea.");
+                resultArray.add("RESPONSE_DETAIL", "");
+                return resultArray;
+            }
+
+            if (this.GetNodeArray().existValue("temperature")) {
+                temperature = GetNodeArray().find("temperature").getStringValue();
+                resultArray.add("SelectedTemperature", temperature);
+            }
+
+            if (this.GetNodeArray().existValue("comments")) {
+                comments = GetNodeArray().find("comments").getStringValue();
+                resultArray.add("SelectedComments", comments);
+            }
+
+            if (this.GetNodeArray().existValue("manager")) {
+                manager = GetNodeArray().find("manager").getStringValue();
+                resultArray.add("SelectedManager", manager);
+            }
+
+            if (this.GetNodeArray().existValue("workersQty")) {
+                workersQty = GetNodeArray().find("workersQty").getIntValue();
+                resultArray.add("SelectedWorkersQty", workersQty);
+            }
+
+            if (this.GetNodeArray().existValue("pressure")) {
+                pressure = GetNodeArray().find("pressure").getStringValue();
+                resultArray.add("SelectedPressure", pressure);
+            }
+
+            if (this.GetNodeArray().existValue("formula")) {
+                formula = GetNodeArray().find("formula").getStringValue();
+                resultArray.add("SelectedFormula", formula);
+            }
+
+            if (this.GetNodeArray().existValue("selectedSection")) {
+                selectedSection = GetNodeArray().find("selectedSection").getStringValue();
+                resultArray.add("SelectedSection", selectedSection);
+            }
+
+            if (this.GetNodeArray().existValue("selectedLabor")) {
+                selectedLabor = GetNodeArray().find("selectedLabor").getStringValue();
+                resultArray.add("SelectedLabor", selectedLabor);
+            }
+
+            if (this.GetNodeArray().existValue("selectedCrop")) {
+                selectedCrop = GetNodeArray().find("selectedCrop").getStringValue();
+                resultArray.add("SelectedCrop", selectedCrop);
+            }
+
+            if (this.GetNodeArray().existValue("operator")) {
+                operator = GetNodeArray().find("operator").getStringValue();
+                resultArray.add("SelectedOperator", operator);
+            }
+            if (this.GetNodeArray().existValue("tractor")) {
+                tractor = GetNodeArray().find("tractor").getStringValue();
+                resultArray.add("SelectedTractor", tractor);
+            }
+            if (this.GetNodeArray().existValue("tool")) {
+                tool = GetNodeArray().find("tool").getStringValue();
+                resultArray.add("SelectedTool", tool);
+            }
+
+            if (taskType.equalsIgnoreCase("Farming")) {
+                pstmtInsertFarmingTask.setInt(1, idCamp);
+                pstmtInsertFarmingTask.setString(2, taskDate);
+                pstmtInsertFarmingTask.setString(3, comments);
+                pstmtInsertFarmingTask.setInt(4, idUser);
+                pstmtInsertFarmingTask.setInt(5, idSupervisor);
+                pstmtInsertFarmingTask.setString(6, tractor);
+                pstmtInsertFarmingTask.setString(7, tool);
+                pstmtInsertFarmingTask.setString(8, operator);
+                rowsAffected = pstmtInsertFarmingTask.executeUpdate();
+                if (rowsAffected > 0) {
+                    rset = pstmtInsertFarmingTask.getGeneratedKeys();
+                    if (rset.next()) {
+                        idTask = rset.getInt(1);
+                    }
+                    if (rset != null) {
+                        rset.close();
+                        rset = null;
+                    }
+                    boolSaveSection = true;
+                    boolSaveHistory = true;
+                    taskType = "Labranza";
+                }
+            } else if (taskType.equalsIgnoreCase("Application")) {
+                pstmtInsertApplicationTask.setInt(1, idCamp);
+                pstmtInsertApplicationTask.setString(2, taskDate);
+                pstmtInsertApplicationTask.setString(3, temperature);
+                pstmtInsertApplicationTask.setString(4, comments);
+                pstmtInsertApplicationTask.setInt(5, idUser);
+                pstmtInsertApplicationTask.setInt(6, idSupervisor);
+                rowsAffected = pstmtInsertApplicationTask.executeUpdate();
+                if (rowsAffected > 0) {
+                    rset = pstmtInsertApplicationTask.getGeneratedKeys();
+                    if (rset.next()) {
+                        idTask = rset.getInt(1);
+                    }
+                    if (rset != null) {
+                        rset.close();
+                        rset = null;
+                    }
+                    boolSaveSection = true;
+                    //boolSaveLabor = true;
+                    boolSaveHistory = true;
+                    taskType = "Aplicacion Foliar";
+                }
+            } else if (taskType.equalsIgnoreCase("Picking")) {
+                pstmtInsertPickingTask.setInt(1, idCamp);
+                pstmtInsertPickingTask.setString(2, taskDate);
+                pstmtInsertPickingTask.setString(3, comments);
+                pstmtInsertPickingTask.setInt(4, idUser);
+                pstmtInsertPickingTask.setInt(5, idSupervisor);
+                rowsAffected = pstmtInsertPickingTask.executeUpdate();
+                if (rowsAffected > 0) {
+                    rset = pstmtInsertPickingTask.getGeneratedKeys();
+                    if (rset.next()) {
+                        idTask = rset.getInt(1);
+                    }
+                    if (rset != null) {
+                        rset.close();
+                        rset = null;
+                    }
+                    boolSaveSection = true;
+                    boolSaveCrop = true;
+                    boolSaveHistory = true;
+                    taskType = "Cosecha";
+                }
+            } else if (taskType.equalsIgnoreCase("Journal")) {
+                pstmtInsertJournalTask.setInt(1, idCamp);
+                pstmtInsertJournalTask.setString(2, taskDate);
+                pstmtInsertJournalTask.setString(3, comments);
+                pstmtInsertJournalTask.setString(4, manager);
+                pstmtInsertJournalTask.setInt(5, workersQty);
+                pstmtInsertJournalTask.setInt(6, idUser);
+                pstmtInsertJournalTask.setInt(7, idSupervisor);
+                rowsAffected = pstmtInsertJournalTask.executeUpdate();
+                if (rowsAffected > 0) {
+                    rset = pstmtInsertJournalTask.getGeneratedKeys();
+                    if (rset.next()) {
+                        idTask = rset.getInt(1);
+                    }
+                    if (rset != null) {
+                        rset.close();
+                        rset = null;
+                    }
+                    boolSaveSection = true;
+                    boolSaveLabor = true;
+                    boolSaveHistory = true;
+                    taskType = "Jornal";
+                }
+            } else if (taskType.equalsIgnoreCase("Irrigation")) {
+                pstmtInsertIrrigationTask.setInt(1, idCamp);
+                pstmtInsertIrrigationTask.setString(2, taskDate);
+                pstmtInsertIrrigationTask.setString(3, comments);
+                pstmtInsertIrrigationTask.setString(4, pressure);
+                pstmtInsertIrrigationTask.setString(5, formula);
+                pstmtInsertIrrigationTask.setInt(6, idUser);
+                pstmtInsertIrrigationTask.setInt(7, idSupervisor);
+                rowsAffected = pstmtInsertIrrigationTask.executeUpdate();
+                if (rowsAffected > 0) {
+                    rset = pstmtInsertIrrigationTask.getGeneratedKeys();
+                    if (rset.next()) {
+                        idTask = rset.getInt(1);
+                    }
+                    if (rset != null) {
+                        rset.close();
+                        rset = null;
+                    }
+                    boolSaveSection = true;
+                    boolSaveLabor = true;
+                    boolSaveHistory = true;
+                    taskType = "Riego";
+                }
+            } else {
+                conn.rollback();
+                resultArray.add("error", "No se pudo registrar el movimiento.");
+                resultArray.add("RESPONSE_CODE", "FAIL");
+                resultArray.add("RESPONSE_MESSAGE", "No se encontro el tipo de tarea.");
+                resultArray.add("RESPONSE_DETAIL", "");
+                return resultArray;
+            }
+
+            if (boolSaveSection) {
+                //Save Task Section
+                for (String section : selectedSection.split(",")) {
+                    if (!section.equals("empty")) {
+                        pstmtCampSection.setString(1, section);
+                        rset = pstmtCampSection.executeQuery();
+                        if (rset.next()) {
+                            area = rset.getString("Area");
+                            landType = rset.getString("LandTypeName");
+                            pipeType = rset.getString("PipeTypeName");
+                        }
+                        if (rset != null) {
+                            rset.close();
+                            rset = null;
+                        }
+                        pstmtInsertTaskSection.setInt(1, idTask);
+                        pstmtInsertTaskSection.setString(2, section);
+                        pstmtInsertTaskSection.setString(3, area);
+                        pstmtInsertTaskSection.setString(4, landType);
+                        pstmtInsertTaskSection.setString(5, pipeType);
+                        pstmtInsertTaskSection.setInt(6, idUser);
+                        pstmtInsertTaskSection.executeUpdate();
+                    }
+                }
+            }
+
+            if (boolSaveCrop) {
+                //Save Task Crop
+                for (String crop : selectedCrop.split(",")) {
+                    if (!crop.equals("empty")) {
+                        pstmtCrop.setString(1, crop);
+                        rset = pstmtCrop.executeQuery();
+                        if (rset.next()) {
+                            cropTypeName = rset.getString("CropTypeName");
+                        }
+                        if (rset != null) {
+                            rset.close();
+                            rset = null;
+                        }
+                        pstmtInsertTaskCrop.setInt(1, idTask);
+                        pstmtInsertTaskCrop.setString(2, cropTypeName);
+                        pstmtInsertTaskCrop.setString(3, crop);
+                        pstmtInsertTaskCrop.setInt(4, idUser);
+                        pstmtInsertTaskCrop.executeUpdate();
+                    }
+                }
+            }
+
+            if (boolSaveLabor) {
+                //Save Task Labor
+                for (String labor : selectedLabor.split(",")) {
+                    if (!labor.equals("empty")) {
+                        pstmtInsertTaskLabor.setInt(1, idTask);
+                        pstmtInsertTaskLabor.setString(2, labor);
+                        pstmtInsertTaskLabor.setInt(3, idUser);
+                        pstmtInsertTaskLabor.executeUpdate();
+                    }
+                }
+            }
+
+            if (boolSaveHistory) {
+                pstmtInsertTaskHistory.setInt(1, idTask);
+                pstmtInsertTaskHistory.setString(2, taskType);
+                pstmtInsertTaskHistory.setString(3, camp);
+                pstmtInsertTaskHistory.setString(4, selectedSection);
+                pstmtInsertTaskHistory.setString(5, selectedLabor);
+                pstmtInsertTaskHistory.setString(6, selectedCrop);
+                pstmtInsertTaskHistory.setString(7, taskDate);
+                pstmtInsertTaskHistory.setString(8, "Nueva");
+                pstmtInsertTaskHistory.setString(9, comments);
+                pstmtInsertTaskHistory.setString(10, userName);
+                pstmtInsertTaskHistory.setString(11, supervisorName);
+                pstmtInsertTaskHistory.setString(12, tractor);
+                pstmtInsertTaskHistory.setString(13, tool);
+                pstmtInsertTaskHistory.setString(14, operator);
+                rowsAffected = pstmtInsertTaskHistory.executeUpdate();
+
+                if (rowsAffected > 0) {
+                    conn.commit();
+                    resultArray.add("RESPONSE_CODE", "PASS");
+                    resultArray.add("RESPONSE_MESSAGE", "La tarea ha sido registrada exitosamente.");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                } else {
+                    conn.rollback();
+                    resultArray.add("error", "La tarea no pudo ser registrada.");
+                    resultArray.add("RESPONSE_CODE", "FAIL");
+                    resultArray.add("RESPONSE_MESSAGE", "La tarea no pudo ser registrada.");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                }
+
+            }
+
+            return resultArray;
+        } catch (SQLException e) {
+            conn.rollback();
+            System.out.println("SaveSectionCropTransaction::Execute> SQLException: " + e.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "SQLException:" + e.getMessage());
+            resultArray.add("RESPONSE_DETAIL", e.getMessage());
+            return resultArray;
+        } catch (Exception ex) {
+            conn.rollback();
+            System.out.println("SaveSectionCropTransaction::Execute> Exception: " + ex.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "Exception:" + ex.getMessage());
+            resultArray.add("RESPONSE_DETAIL", ex.getMessage());
+            return resultArray;
+        } finally {
+            CloseStatements();
+//            System.out.println("<SaveSectionCropTransaction::Execute> exit");
+        }
+    }
+
+    /**
+     * Generates an xmlNodeArray containing parameters for this transaction
+     *
+     * @return xmlNodeArray that contains parameters for the transaction
+     * @exception (none)
+     */
+    @Override
+    public xmlNodeArray GenerateTestParameters() {
+        xmlNodeArray nodeArr = new xmlNodeArray();
+        nodeArr.add("TRANSACTION_CLASS_TO_EXECUTE", "JonesPlasticTransactions.SaveSectionCropTransaction");
+
+        return nodeArr;
+
+    }
+
+    /**
+     * The main method for the transaction. Creates a database connection and an
+     * error Array, then executes the transaction and reports any errors
+     *
+     * @param argv argv[0] is an optional configuration file name
+     * @exception (none)
+     */
+    public static void main(String[] argv) {
+        try {
+            SaveNewTaskTransaction transaction = new SaveNewTaskTransaction();
+            SIDWebTransaction resultTransaction = null;
+            xmlNodeArray inputParameterArray = null;
+            //CIMDataBase database = null;
+            System.out.println("Usage: java -classpath ...JonesPlasticTransactions.SaveSectionCropTransaction");
+
+            //<Add Database connection parameter for testing>
+            database = new SIDDataBase("jdbc:mysql://localhost:3306/agrocosa", "root", "entrar123");
+
+            transaction.SetSIDDataBase(database);
+            inputParameterArray = transaction.GenerateTestParameters();
+            if (!transaction.IsValidTransaction()) {
+                System.out.println(" SaveSectionCropTransaction contains an invalid transaction type.");
+            } else {
+                if (!transaction.Supports(inputParameterArray)) {
+                    System.out.println(" SaveSectionCropTransaction does not support this list of parameters.");
+                } else {
+                    resultTransaction = database.ExecuteTransaction("JonesPlasticTransactions.SaveSectionCropTransaction", inputParameterArray);
+                    if (resultTransaction == null) {
+                        System.out.println("The transaction's result array is null.");
+                    } else {
+                        if (resultTransaction.GetError() != null) {
+                            resultTransaction.GetError().print();
+                        } else {
+                            if (resultTransaction.GetResultArray() == null) {
+                                System.out.println("SaveSectionCropTransaction - No results were returned.");
+                            } else {
+                                xmlNodeArray array = resultTransaction.GetResultArray();
+                                String str = xmlNodeArray.xmlNodeArray2String(array);
+                                array = xmlNodeArray.string2xmlNodeArray(str);
+                                System.out.println(str);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("SaveSectionCropTransaction::main> caught exception " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}

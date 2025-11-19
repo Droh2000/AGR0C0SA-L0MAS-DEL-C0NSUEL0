@@ -1,0 +1,498 @@
+<%@ taglib uri="http://displaytag.sf.net" prefix="display"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
+
+<!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+<!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+<![endif]-->
+
+<script src="../plugins/jasny/js/jasny-bootstrap.min.js" type="text/javascript"></script>
+<link href="../plugins/jasny/css/jasny-bootstrap.min.css" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" href="../plugins/iCheck/all.css">
+
+
+<script type="text/javascript">
+    function radio(clicked) {
+        var form = clicked.form;
+        var checkboxes = form.elements[clicked.name];
+
+        //alert(checkboxes.length);
+        if (!clicked.checked) {
+            clicked.parentNode.parentNode.className = "";
+            return false;
+        }
+
+        for (i = 0; i < checkboxes.length; i++) {
+            if (checkboxes[i] !== clicked) {
+                checkboxes[i].checked = false;
+                checkboxes[i].parentNode.parentNode.className = "";
+            }
+        }
+
+        // highlight the row
+        clicked.parentNode.parentNode.className = "over";
+    }
+
+    function validateSelectedItem()
+    {
+        for (i = 0; i < document.paramsForm.elements.length; i++)
+        {
+            if (document.paramsForm.elements[i].type === "checkbox")
+            {
+                if (document.paramsForm.elements[i].checked)
+                    return true;
+            }
+        }
+        alert('Por favor seleccione un registro para utilizar esta opcion.');
+        return false;
+    }
+
+    function confirmSave()
+    {
+        var answer = confirm("Esta usted seguro de querer guardar este registro?");
+        if (answer)
+        {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    function checkIt(evt) {
+        evt = (evt) ? evt : window.event;
+        var charCode = (evt.which) ? evt.which : evt.keyCode;
+        if (charCode > 31 && (charCode < 48 || charCode > 57))
+        {
+            //status = "This field accepts numbers only.";
+            return false;
+        }
+        return true;
+    }
+    function confirmDelete()
+    {
+        if (validateSelectedItem())
+        {
+            var answer = confirm("Esta usted seguro de eliminar este registro?");
+            if (answer)
+                return true;
+            else
+                return false;
+        }
+        else
+            return false;
+    }
+    function confirmDeletePhoto(idUser)
+    {
+        var answer = confirm("Esta usted seguro de eliminar la imagen?");
+        if (answer)
+        {
+            $('#idUserDelPic').val(idUser);
+            $('#delPicForm').submit();
+        } else {
+            return false;
+        }
+    }
+
+    function addAccess(idUser)
+    {
+
+        $('#selectedIdUser').val(idUser);
+        $('#frmAddAccess').submit();
+
+    }
+
+</script>
+
+<!-- Content Wrapper. Contains page content -->
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <section class="content-header">
+        <h1>
+            Administracion de Usuario
+            <small>Configuracion de catalogo de usuarios</small>
+        </h1>
+        <ol class="breadcrumb">
+            <li><a href="#"><i class="fa fa-caret-right"></i> Configuración</a></li>
+            <li class="active">Aqui</li>
+        </ol>
+    </section>
+
+    <!-- Main content -->
+    <section class="content">
+
+        <c:choose>
+            <c:when test="${requestScope.RESPONSE_CODE == 'PASS'}">                    
+                <c:if test="${requestScope.RESPONSE_MESSAGE ne 'OK'}">
+
+
+                    <div class="alert alert-success alert-dismissable">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                        <h4>	<i class="icon fa fa-check"></i> OK</h4>
+                        <c:out value="${requestScope.RESPONSE_MESSAGE}" /><br />
+                        <c:out value="${requestScope.RESPONSE_DETAIL}" />
+                    </div>
+                </c:if>
+            </c:when>
+            <c:when test="${requestScope.RESPONSE_CODE == 'FAIL'}">
+                <div class="alert alert-danger alert-dismissable">
+                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                    <h4><i class="icon fa fa-ban"></i> Error !</h4>
+                    <c:out value="${requestScope.RESPONSE_MESSAGE}" /><br />
+                    <c:out value="${requestScope.RESPONSE_DETAIL}" />
+                </div>
+
+            </c:when>
+        </c:choose>
+
+        <form name="paramsForm" method="POST" action="userManagement.do"  onsubmit="">
+            <div class="box box-success">
+                <div class="box-header with-border">
+                    <h3 class="box-title">Usuarios</h3>
+                </div>
+
+
+                <div class="box-body" id="info" > 
+                    <c:forEach items="${UserInfo_Table}" var="row" varStatus="status">
+                        <c:choose>
+                            <c:when test="${requestScope.Method == 'Edit' and requestScope.ID == row.idUser}">
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <div class="form-group">
+                                            <div class="col-sm-6">
+                                                <label>Rol</label>                                                
+                                                <div class="form-group">
+                                                    <select name="idRole" id="Rol" class="form-control" data-title="No puede estar vacio" required >
+                                                        <c:forEach items="${Role_HashMap}" var="item">
+                                                            <option value="${item.key}"  ${row.Role == item.value  ? 'selected' : ''}>${item.value}</option>
+                                                        </c:forEach>
+                                                    </select>
+                                                </div>
+                                                <label>Nombre</label>                                                
+                                                <div class="form-group">
+                                                    <input class="form-control" placeholder="Nombre" type="text" data-title="No puede estar vacio" required name="FirstName" style="padding: 0" size ="25" value="<c:out value="${row.FirstName}"/>" />
+                                                </div>
+                                                <label>Apellido</label>                                                
+                                                <div class="form-group">
+                                                    <input class="form-control" placeholder="Apellido" type="text" data-title="No puede estar vacio" required name="LastName" style="padding: 0" size ="25" value="<c:out value="${row.LastName}"/>" />
+                                                </div>
+                                            </div>
+
+                                            <div class="col-sm-6">
+                                                <label>Usuario</label>                                                
+                                                <div class="form-group">
+                                                    <input class="form-control" placeholder="usuario" type="text" name="UserName" style="padding: 0" size ="15" value="<c:out value="${row.UserName}"/>"
+                                                           data-title="Usuario" required data-regex="^[a-z0-9-]+$"/>
+                                                </div>
+                                                <label>Contraseña</label>                                                
+                                                <div class="form-group">
+                                                    <input type="password" class="form-control" placeholder="Contraseña" name="Password" data-title="No puede estar vacio" required style="padding: 0" size ="15" value="${row.Password}" />
+                                                </div>
+                                                <label>NOTA:</label> 
+                                                <div class="form-group"><p>La longitud maxima permitida de la contraseña es de 6 caracteres.</p></div>    
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-6">
+                                        <div class="form-group">
+                                            <div class="col-sm-6">
+                                                <div class="bootstrap-timepicker">
+                                                    <div class="form-group">
+                                                        <label>Fecha de Registro</label>                                                
+                                                        <div class="input-group">
+                                                            <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                                                            <input type="text" name="StartDate" id="StartDate" class="form-control" value="${row.InsertDate}" readonly />
+                                                        </div>
+                                                    </div><!-- /.form group -->
+                                                </div>
+                                                <div class="bootstrap-timepicker">
+                                                    <div class="form-group">
+                                                        <label>Fecha de Modificacion</label>                                                
+                                                        <div class="input-group">
+                                                            <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                                                            <input type="text" name="EndDate" id="EndDate" class="form-control" value="${row.ModifiedDate}" readonly />
+                                                        </div>
+                                                    </div><!-- /.form group -->
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    </div>                                                        
+                                </div>
+                                <input type="hidden" name="ID" title="${row.idUser}" value="${row.idUser}"/>
+                            </c:when>
+                        </c:choose>
+                    </c:forEach>
+                </div>
+
+
+                <div class="box-footer">
+                    <c:if test="${requestScope.UserInfo_Table ne null}">
+                        <c:if test="${requestScope.Method ne null and requestScope.Action ne 'Done'}">&nbsp;
+                            <button type="submit" class="btn btn-primary" title ="Guardar" name="Method" id="btnSubmit" value="Save" onclick="">
+                                <i class="fa fa-save"></i> Guardar
+                            </button>
+                            <button type="Submit" class="btn btn-primary" title ="Cancelar" name="Method" id="btnSubmit"  onclick="location.href = 'userManagement.do'">
+                                <i class="fa fa-remove"></i> Cancelar
+                            </button>                            
+                        </c:if>
+
+                        <c:if test="${requestScope.Method eq null or requestScope.Action eq 'Done'}"> &nbsp;
+                            <button type="submit" class="btn btn-primary" title ="Agregar" name="Method" id="btnSubmit" value="Add">
+                                <i class="fa fa-plus-square"></i> Agregar
+                            </button>
+                            <button type="submit" class="btn btn-primary" title ="Editar" name="Method" id="btnSubmit" value="Edit" onclick="return validateSelectedItem();">
+                                <i class="fa fa-edit"></i> Editar
+                            </button>
+                            <button class="btn btn-primary" title ="Eliminar" name="Method" id="btnSubmit" value="Delete" onclick="return confirmDelete();">
+                                <i class="fa fa-minus-square"></i> Eliminar
+                            </button>
+                        </c:if>
+                    </c:if>
+                </div>
+
+            </div>
+
+            <c:if test="${requestScope.UserInfo_Table ne null}">
+                <div class="box box-success">
+                    <div class="box-body" id="info" > 
+                        <div style="margin-top: 10px;"> 
+                            <c:if test="${requestScope.Method eq null or requestScope.Action eq 'Done'}"> &nbsp;
+
+                            </c:if>
+                        </div>
+                        <div class="table-responsive">
+
+                            <table id="dtable" class="table table-bordered table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th>Usuario</th>
+                                        <th>Nombre</th>
+                                        <th>Apellido</th>
+                                        <th>Contraseña</th>
+                                        <th>Rol</th>
+                                        <th>Fecha de Registro</th>
+                                        <th>Fecha de Modificacion</th>
+                                        <th>Foto</th>
+                                            <c:if test="${sessionScope.rol eq 'Administrador'}">
+                                            <th>Accesos</th>
+                                            </c:if> 
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <c:forEach items="${UserInfo_Table}" var="row" varStatus="status">
+                                        <tr>
+                                            <td>
+                                                <c:if test="${requestScope.Method ne 'Edit' or (requestScope.ID == row.idUser and requestScope.ID ne 'new' ) }">
+                                                    <input type="checkbox" class="minimal-red" name="ID" title="${row.idUser}" value="${row.idUser}"
+                                                           ${requestScope.ID == row.idUser and requestScope.Method != 'Save' ? 'checked="checked"' : ''} onclick="radio(this);"/>
+                                                </c:if>
+                                            </td>
+                                            <td>${row.UserName}</td>
+                                            <td>${row.FirstName}</td>                                                
+                                            <td>${row.LastName}</td>
+                                            <td>${row.Password}</td>
+                                            <td>${row.Role}</td>
+                                            <td>${row.InsertDate}</td>
+                                            <td>${row.ModifiedDate}</td>
+                                            <td>
+                                                <table>
+                                                    <tr>
+                                                        <td>
+                                                            <div class="user-panel">
+                                                                <div class="pull-left image">
+                                                                    <img src="showUserPictureById.do?idUser=${row.idUser}" alt="user image"/>
+                                                                </div>
+                                                            </div>                                                            
+                                                        </td>
+                                                        <td>&nbsp;</td>
+                                                        <td>
+                                                            <c:if test="${requestScope.Method ne 'Edit'}">
+                                                                <div>
+                                                                    <button name="${row.idUser}" 
+                                                                            id="btnEdit"
+                                                                            type="button" 
+                                                                            class="btn btn-primary" 
+                                                                            title ="Editar Foto" 
+                                                                            data-toggle="popover" 
+                                                                            data-html="true" 
+                                                                            data-container="body" 
+                                                                            data-title="Editar" 
+                                                                            data-placement="left">
+                                                                        <i class="fa fa-edit"></i>
+                                                                    </button>
+                                                                    <button 
+                                                                        type="button" 
+                                                                        id="btnDel"
+                                                                        title="Borrar Foto"
+                                                                        class="btn btn-primary" 
+                                                                        onclick="confirmDeletePhoto(${row.idUser});">
+                                                                        <i class="fa fa-trash"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </c:if>
+                                                        </td>
+                                                    </tr>
+                                                </table>                                                
+                                            </td>
+                                            <c:if test="${sessionScope.rol eq 'Administrador'}">
+                                                <td>
+                                                    <button 
+                                                        type="button" 
+                                                        id="btnDel"
+                                                        title="Accesos"
+                                                        class="btn btn-primary" 
+                                                        onclick="addAccess(${row.idUser});">
+                                                        <i class="fa fa-lock">Accesos</i>
+                                                    </button>
+                                                </td>
+                                            </c:if>
+                                        </tr>
+                                    </c:forEach>
+                                </tbody>
+                            </table> 
+                        </div>
+                    </div>
+                </div>
+            </c:if>
+
+        </form>
+
+        <script>
+            $('#dtable').DataTable({
+                "paging": false,
+                "lengthChange": false,
+                "searching": true,
+                "ordering": true,
+                "info": false,
+                "autoWidth": false,
+                "dom": 'T<"clear">lfrtip',
+                "tableTools": {
+                    "sSwfPath": "../plugins/datatables/extensions/TableTools/swf/copy_csv_xls_pdf.swf"
+                },
+                "columns": [
+                    {"width": "2%"},
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+                ]
+            });
+            $('form').bootstrap3Validate(function (e, data) {
+            });</script>
+
+
+        <!-- iCheck 1.0.1 -->
+        <script src="../plugins/iCheck/icheck.min.js"></script>
+
+        <script>
+            //iCheck for checkbox and radio inputs
+            $('input[type="checkbox"].minimal, input[type="radio"].minimal').iCheck({
+                checkboxClass: 'icheckbox_minimal-blue',
+                radioClass: 'iradio_minimal-blue'
+            });
+            //Red color scheme for iCheck
+            $('input[type="checkbox"].minimal-red, input[type="radio"].minimal-red').iCheck({
+                checkboxClass: 'icheckbox_minimal-red',
+                radioClass: 'iradio_minimal-red'
+            });
+            //Flat red color scheme for iCheck
+            $('input[type="checkbox"].flat-red, input[type="radio"].flat-red').iCheck({
+                checkboxClass: 'icheckbox_flat-green',
+                radioClass: 'iradio_flat-green'
+            });
+
+        </script>         
+
+
+
+        <script>
+            (function ($) {
+
+                $('form').bootstrap3Validate(function (e, data) {
+                });
+
+            })(jQuery)
+        </script>
+
+
+        <div class="hide" id="popover-content">            
+            <div class="fileinput fileinput-new" data-provides="fileinput">
+                <div style="padding-left: 30px; padding-top: 30px;">
+                    <div class="fileinput-preview thumbnail" data-trigger="fileinput" style="width: 200px; height: 150px;"></div>
+                    <span class="btn btn-primary btn-file">
+                        <span class="fileinput-new">
+                            <i class="fa fa-photo"></i> Seleccionar imagen
+                        </span>
+                        <span class="fileinput-exists">
+                            <i class="fa fa-photo"></i> Cambiar
+                        </span>
+                        <input type="file" name="fileName">
+                    </span>
+                    <a href="#" class="btn btn-primary fileinput-exists" data-dismiss="fileinput">
+                        <i class="fa fa-remove"></i> Eliminar
+                    </a>
+                    <span class="fileinput-exists" style="padding-top: 5px;">
+                        <button class="btn btn-primary" type="submit">
+                            <span class="btn-save-label">
+                                <i class="fa fa-upload"></i>
+                            </span> Guardar
+                        </button>
+                    </span>
+                </div>
+            </div>   
+        </div>
+
+        <script>
+            $("[data-toggle=popover]").popover({
+                html: true,
+                content: function () {
+                    return "<form name=\"loadImgForm\" method =\"POST\" action=\"editUserPicture.do\" enctype=\"multipart/form-data\" >"
+                            + $('#popover-content').html()
+                            + "<input type=\"hidden\" name=\"idUser\" id=\"idUser\" value='" + this.name + "'/>"
+                            + "</form>";
+                }
+            });
+        </script>
+
+
+        <div class="hide">
+            <form name="delPicForm" id="delPicForm" method="post" action="userManagement.do">
+                <input type="hidden" id="idUserDelPic" name="idUser" value=""/>
+                <input type="hidden" name="Action" value="DeletePicture"/>
+            </form>
+        </div>            
+
+        <div class="hide">
+            <form name="frmAddAccess" id="frmAddAccess" method="post" action="addAccess.do">
+                <input type="hidden" id="selectedIdUser" name="idUser" value=""/>
+                <input type="hidden" name="Action" value="AddAccess"/>
+            </form>
+        </div>  
+
+        <c:if test="false">
+            <c:forEach items='${requestScope}' var='p'>
+                <ul>
+                    <%-- Display the key of the current item, which
+                         represents the parameter name --%>
+                    <li>Parameter Name: <c:out value='${p.key}'/></li>
+
+                    <%-- Display the value of the current item, which
+                         represents the parameter value --%>
+                    <li>Parameter Value: <c:out value='${p.value}'/></li>
+                </ul>
+            </c:forEach>
+        </c:if>
+
+    </section><!-- /.content -->
+</div><!-- /.content-wrapper -->

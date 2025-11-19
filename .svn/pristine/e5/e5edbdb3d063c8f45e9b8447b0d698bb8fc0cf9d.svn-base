@@ -1,0 +1,324 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package AgrocosaTransactions;
+
+import SIDWebEngine.*;
+import java.sql.*;
+import xmlNodeArray.*;
+
+public class SaveSelectedSectionTransaction extends SIDWebTransaction {
+
+    protected PreparedStatement pstmtInsert;
+    protected PreparedStatement pstmtValidateDuplicate;
+
+    /**
+     * Default Constructor
+     *
+     * @exception (none)
+     */
+    public SaveSelectedSectionTransaction() {
+        super();
+        SetTransactionType(SIDWebTransaction.SaveType);
+    }
+
+    /**
+     * Checks to see if the node Array is supported
+     *
+     * @param nodeArray
+     * @return <B>true</B> if the nodeArray is supported. <B>false</B> otherwise
+     * @exception (none)
+     */
+    @Override
+    public boolean Supports(xmlNodeArray nodeArray) {
+
+        //Add tag names as comma separated Strings to the mandatoryTags array
+        String[] mandatoryTags = {
+            "idUser",
+            "SectionName",
+            "idCamp"
+        };
+
+        //Add tag names as comma separated Strings to the optionalTags array
+        String[] optionalTags = {};
+        //Add tag names as comma separated Strings to the mandatorySets array
+        String[] mandatorySets = {};
+        //Add tag names as comma separated Strings to the optionalSetTags array
+        String[] optionalSets = {};
+
+        xmlNodeArray errArray = new xmlNodeArray();
+        for (int i = 0; i < mandatoryTags.length; i++) {
+            if (!nodeArray.existValue(mandatoryTags[i])) {
+                System.out.println("<SaveSelectedSectionTransaction::Supports> " + mandatoryTags[i] + " Mandatory tag not found or value is empty/null");
+                errArray.add("ERROR", "MANDATORY_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalTags.length; i++) {
+            if (nodeArray.exist(optionalTags[i]) && !nodeArray.existValue(optionalTags[i])) {
+                System.out.println("<SaveSelectedSectionTransaction::Supports> " + optionalTags[i] + " Optional tag not found or value is empty/null");
+                errArray.add("OPTIONAL_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < mandatorySets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) == null || nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0) {
+                System.out.println("<SaveSelectedSectionTransaction::Supports> " + mandatorySets[i] + " Mandatory Set not found or value is empty/null");
+                errArray.add("MANDATORY_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalSets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) != null && (nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0)) {
+                System.out.println("<SaveSelectedSectionTransaction::Supports> " + optionalSets[i] + " Optional Set not found or value is empty/null");
+                errArray.add("OPTIONAL_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prepares the SQL statements to be executed
+     *
+     * @return <B>true</B> for successful preparation; <B>false</B> for
+     * unsuccessful preparation
+     * @exception (none)
+     */
+    @Override
+    public synchronized boolean PrepareStatements() {
+        //Note1 : Use PreparedStatements instead of Statements where ever possible
+        //Note2 : If transaction contains no prepared statements, delete entire function
+        //        Unless there are nested transaction, then Prepare will call those.
+        try {
+            Connection con = this.GetSIDDataBase().GetConnection();
+
+            pstmtValidateDuplicate = con.prepareStatement("select * "
+                    + "FROM campsection "
+                    + "where idCamp = ? "
+                    + "and SectionName = ?  "
+                    + "and Active = 1");
+
+            pstmtInsert = con.prepareStatement("Insert into campsection ( "
+                    + "idCamp, "
+                    + "SectionName, "
+                    + "Area, "
+                    + "GrooveQty, "
+                    + "idLandType, "
+                    + "idPipeType, "
+                    + "idUser, "
+                    + "InsertDate, "
+                    + "ModifiedDate, "
+                    + "Active "
+                    + ")Values( "
+                    + "?, " //1 idCamp
+                    + "?, " //2 SectionName
+                    + "?, " //3 Area
+                    + "?, " //4 Groove Qty
+                    + "?, " //5 idLandType
+                    + "?, " //6 idPipeType
+                    + "?, " //7 idUser
+                    + "Now(), " //  InsertDate
+                    + "Now(), " //  ModifiedDate                    
+                    + "1 " //  Active                    
+                    + ")");
+
+            this.addPreparedStatement(pstmtInsert);
+            this.addPreparedStatement(pstmtValidateDuplicate);
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("SaveSelectedSectionTransaction::PrepareStatements> SQLException: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * executes sql statements using input arguments and returns result
+     *
+     * @return valid node array if successful else null
+     * @exception SQLException if sql error occurs
+     * @exception Exception if non sql error occurs
+     */
+    @Override
+    public synchronized xmlNodeArray Execute() throws SQLException, Exception {
+        Connection conn = null;
+        ResultSet rset = null;
+        xmlNodeArray resultArray = null;
+        int idUser = 0;
+        String sectionName = "";
+        int idCamp = 0;
+        int rowsAffected = 0;
+        String area = "";
+        int idLandType = 0;
+        int idPipeType = 0;
+        int grooveQty = 0;
+
+        try {
+            
+            conn = this.GetSIDDataBase().GetConnection();
+            conn.setAutoCommit(false);
+            resultArray = new xmlNodeArray();
+
+            idUser = GetNodeArray().find("idUser").getIntValue();
+            idCamp = GetNodeArray().find("idCamp").getIntValue();
+            sectionName = GetNodeArray().find("SectionName").getStringValue();
+            idLandType = GetNodeArray().find("idLandType").getIntValue();
+            idPipeType = GetNodeArray().find("idPipeType").getIntValue();
+        
+            if (this.GetNodeArray().existValue("Area")) {
+                area = GetNodeArray().find("Area").getStringValue();
+            }
+            
+            if (this.GetNodeArray().existValue("GrooveQty")) {
+                grooveQty = GetNodeArray().find("GrooveQty").getIntValue();
+            }
+            
+            
+            resultArray.add("SelectedSectionName", sectionName);
+            resultArray.add("idCamp", idCamp);
+
+            //validate same service
+            pstmtValidateDuplicate.setInt(1, idCamp);
+            pstmtValidateDuplicate.setString(2, sectionName);
+            rset = pstmtValidateDuplicate.executeQuery();
+            if (rset.next()) {
+                conn.rollback();
+                resultArray.add("error", "Esta seccion " + sectionName + " ya esta asignada a este campo de cultivo.");
+                resultArray.add("RESPONSE_CODE", "FAIL");
+                resultArray.add("RESPONSE_MESSAGE", "Esta seccion " + sectionName + " ya esta asignada a este campo de cultivo.");
+                resultArray.add("RESPONSE_DETAIL", "");
+                resultArray.add("idCamp", idCamp);
+                return resultArray;
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            //Insert 
+            pstmtInsert.setInt(1, idCamp);
+            pstmtInsert.setString(2, sectionName);
+            pstmtInsert.setString(3, area);
+            pstmtInsert.setInt(4, grooveQty);            
+            pstmtInsert.setInt(5, idLandType);
+            pstmtInsert.setInt(6, idPipeType);
+            pstmtInsert.setInt(7, idUser);
+            rowsAffected = pstmtInsert.executeUpdate();
+            if (rowsAffected > 0) {
+                conn.commit();
+                resultArray.add("RESPONSE_CODE", "PASS");
+                resultArray.add("RESPONSE_MESSAGE", "La sección ha sido registrada al campo de cultivo.");
+                resultArray.add("RESPONSE_DETAIL", "");
+            } else {
+                conn.rollback();
+                resultArray.add("error", "La sección no pudo ser registrada al campo de cultivo.");
+                resultArray.add("RESPONSE_CODE", "FAIL");
+                resultArray.add("RESPONSE_MESSAGE", "La seccion no pudo ser registrada al campo de cultivo.");
+                resultArray.add("RESPONSE_DETAIL", "");
+            }
+
+            return resultArray;
+
+        } catch (SQLException e) {
+            conn.rollback();
+            System.out.println("SaveSelectedSectionTransaction::Execute> SQLException: " + e.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "SQLException");
+            resultArray.add("RESPONSE_DETAIL", e.getMessage());
+            return resultArray;
+        } catch (Exception ex) {
+            conn.rollback();
+            System.out.println("SaveSelectedSectionTransaction::Execute> Exception: " + ex.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "Exception");
+            resultArray.add("RESPONSE_DETAIL", ex.getMessage());
+            return resultArray;
+        } finally {
+            CloseStatements();
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+        }
+    }
+
+    /**
+     * Generates an xmlNodeArray containing parameters for this transaction
+     *
+     * @return xmlNodeArray that contains parameters for the transaction
+     * @exception (none)
+     */
+    @Override
+    public xmlNodeArray GenerateTestParameters() {
+        xmlNodeArray nodeArr = new xmlNodeArray();
+        nodeArr.add("TRANSACTION_CLASS_TO_EXECUTE", "AgrocosaTransactions.SaveSelectedSectionTransaction");
+
+        return nodeArr;
+
+    }
+
+    /**
+     * The main method for the transaction. Creates a database connection and an
+     * error Array, then executes the transaction and reports any errors
+     *
+     * @param argv argv[0] is an optional configuration file name
+     * @exception (none)
+     */
+    public static void main(String[] argv) {
+        try {
+            SaveSelectedSectionTransaction transaction = new SaveSelectedSectionTransaction();
+            SIDWebTransaction resultTransaction = null;
+            xmlNodeArray inputParameterArray = null;
+            //CIMDataBase database = null;
+            System.out.println("Usage: java -classpath ...AgrocosaTransactions.SaveSelectedSectionTransaction");
+
+            //<Add Database connection parameter for testing>
+            database = new SIDDataBase("jdbc:mysql://localhost:3306/agrocosa", "root", "entrar123");
+
+            transaction.SetSIDDataBase(database);
+            inputParameterArray = transaction.GenerateTestParameters();
+            if (!transaction.IsValidTransaction()) {
+                System.out.println(" SaveSelectedSectionTransaction contains an invalid transaction type.");
+            } else {
+                if (!transaction.Supports(inputParameterArray)) {
+                    System.out.println(" SaveSelectedSectionTransaction does not support this list of parameters.");
+                } else {
+                    resultTransaction = database.ExecuteTransaction("AgrocosaTransactions.SaveSelectedSectionTransaction", inputParameterArray);
+                    if (resultTransaction == null) {
+                        System.out.println("The transaction's result array is null.");
+                    } else {
+                        if (resultTransaction.GetError() != null) {
+                            resultTransaction.GetError().print();
+                        } else {
+                            if (resultTransaction.GetResultArray() == null) {
+                                System.out.println("SaveSelectedSectionTransaction - No results were returned.");
+                            } else {
+                                xmlNodeArray array = resultTransaction.GetResultArray();
+                                String str = xmlNodeArray.xmlNodeArray2String(array);
+                                array = xmlNodeArray.string2xmlNodeArray(str);
+                                System.out.println(str);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("SaveSelectedSectionTransaction::main> caught exception " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}

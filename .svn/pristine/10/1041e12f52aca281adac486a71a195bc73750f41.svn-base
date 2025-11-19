@@ -1,0 +1,316 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package AgrocosaTransactions;
+
+import SIDWebEngine.*;
+import java.sql.*;
+import xmlNodeArray.*;
+
+public class SaveSelectedBombTransaction extends SIDWebTransaction {
+
+    protected PreparedStatement pstmtUpdate;
+    protected PreparedStatement pstmtInsert;
+    protected PreparedStatement pstmtValidate;
+
+    /**
+     * Default Constructor
+     *
+     * @exception (none)
+     */
+    public SaveSelectedBombTransaction() {
+        super();
+        SetTransactionType(SIDWebTransaction.SaveType);
+    }
+
+    /**
+     * Checks to see if the node Array is supported
+     *
+     * @param nodeArray
+     * @return <B>true</B> if the nodeArray is supported. <B>false</B> otherwise
+     * @exception (none)
+     */
+    @Override
+    public boolean Supports(xmlNodeArray nodeArray) {
+
+        //Add tag names as comma separated Strings to the mandatoryTags array
+        String[] mandatoryTags = {
+            "idUser",
+            "idCamp"
+        };
+
+        //Add tag names as comma separated Strings to the optionalTags array
+        String[] optionalTags = {};
+        //Add tag names as comma separated Strings to the mandatorySets array
+        String[] mandatorySets = {};
+        //Add tag names as comma separated Strings to the optionalSetTags array
+        String[] optionalSets = {};
+
+        xmlNodeArray errArray = new xmlNodeArray();
+        for (int i = 0; i < mandatoryTags.length; i++) {
+            if (!nodeArray.existValue(mandatoryTags[i])) {
+                System.out.println("<SaveSelectedBombTransaction::Supports> " + mandatoryTags[i] + " Mandatory tag not found or value is empty/null");
+                errArray.add("ERROR", "MANDATORY_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalTags.length; i++) {
+            if (nodeArray.exist(optionalTags[i]) && !nodeArray.existValue(optionalTags[i])) {
+                System.out.println("<SaveSelectedBombTransaction::Supports> " + optionalTags[i] + " Optional tag not found or value is empty/null");
+                errArray.add("OPTIONAL_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < mandatorySets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) == null || nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0) {
+                System.out.println("<SaveSelectedBombTransaction::Supports> " + mandatorySets[i] + " Mandatory Set not found or value is empty/null");
+                errArray.add("MANDATORY_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalSets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) != null && (nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0)) {
+                System.out.println("<SaveSelectedBombTransaction::Supports> " + optionalSets[i] + " Optional Set not found or value is empty/null");
+                errArray.add("OPTIONAL_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prepares the SQL statements to be executed
+     *
+     * @return <B>true</B> for successful preparation; <B>false</B> for
+     * unsuccessful preparation
+     * @exception (none)
+     */
+    @Override
+    public synchronized boolean PrepareStatements() {
+        //Note1 : Use PreparedStatements instead of Statements where ever possible
+        //Note2 : If transaction contains no prepared statements, delete entire function
+        //        Unless there are nested transaction, then Prepare will call those.
+        try {
+            Connection con = this.GetSIDDataBase().GetConnection();
+            pstmtValidate = con.prepareStatement(""
+                    + "select * "
+                    + "from campinfo "
+                    + "where idCamp = ?");
+
+            pstmtInsert = con.prepareStatement("Insert into campinfo ( "
+                    + "idCamp, "
+                    + "idBombPrimary, "
+                    + "idBombSecondary, "
+                    + "idUser, "
+                    + "InsertDate, "
+                    + "ModifiedDate, "                    
+                    + "Active "
+                    + ")Values( "
+                    + "?, " //1 idCamp
+                    + "?, " //2 idBombPrimary
+                    + "?, " //3 idBombSecondary
+                    + "?, " //4 idUser
+                    + "Now(), " //  InsertDate
+                    + "Now(), " //  ModifiedDate                    
+                    + "1 " //  Active                    
+                    + ")");
+
+            pstmtUpdate = con.prepareStatement("Update campinfo set "
+                    + "idBombPrimary = ?, "     //1 idBombPrimary
+                    + "idBombSecondary = ?, "   //2 idBombSecondary
+                    + "ModifiedDate = Now(), "
+                    + "idUser = ? "             //3 idUser
+                    + "where idCamp = ? "       //4 idCamp
+                    + "and Active = 1");
+
+            this.addPreparedStatement(pstmtValidate);
+            this.addPreparedStatement(pstmtInsert);
+            this.addPreparedStatement(pstmtUpdate);
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("SaveSelectedBombTransaction::PrepareStatements> SQLException: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * executes sql statements using input arguments and returns result
+     *
+     * @return valid node array if successful else null
+     * @exception SQLException if sql error occurs
+     * @exception Exception if non sql error occurs
+     */
+    @Override
+    public synchronized xmlNodeArray Execute() throws SQLException, Exception {
+        Connection conn = null;
+        ResultSet rset = null;
+        xmlNodeArray resultArray = null;
+        int idUser = 0;
+        int idCamp = 0;
+        int rowsAffected = 0;
+        boolean boolExist = false;
+        String idBombPrimary = null;
+        String idBombSecondary = null;
+
+        try {
+            conn = this.GetSIDDataBase().GetConnection();
+            conn.setAutoCommit(false);
+            resultArray = new xmlNodeArray();
+
+            idUser = GetNodeArray().find("idUser").getIntValue();
+            idCamp = GetNodeArray().find("idCamp").getIntValue();
+
+            if (this.GetNodeArray().existValue("idBombPrimary")) {
+                idBombPrimary = GetNodeArray().find("idBombPrimary").getStringValue();
+                resultArray.add("SelectedBombPrimary", idBombPrimary);
+            }
+            if (this.GetNodeArray().existValue("idBombSecondary")) {
+                idBombSecondary = GetNodeArray().find("idBombSecondary").getStringValue();
+                resultArray.add("SelectedBombSecondary", idBombSecondary);
+            }
+
+            //validate camp
+            pstmtValidate.setInt(1, idCamp);
+            rset = pstmtValidate.executeQuery();
+            if (rset.next()) {
+                boolExist = true;
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            if (boolExist) {
+                //Update - Active = 0
+                pstmtUpdate.setString(1, idBombPrimary);
+                pstmtUpdate.setString(2, idBombSecondary);
+                pstmtUpdate.setInt(3, idUser);
+                pstmtUpdate.setInt(4, idCamp);
+                rowsAffected = pstmtUpdate.executeUpdate();
+            } else {
+                //insert
+                pstmtInsert.setInt(1, idCamp);
+                pstmtInsert.setString(2, idBombPrimary);
+                pstmtInsert.setString(3, idBombSecondary);
+                pstmtInsert.setInt(4, idUser);
+                rowsAffected = pstmtInsert.executeUpdate();
+            }
+            
+            //commit
+            if (rowsAffected > 0) {
+                conn.commit();
+                resultArray.add("idCamp", idCamp);
+                resultArray.add("RESPONSE_CODE", "PASS");
+                resultArray.add("RESPONSE_MESSAGE", "Las bombas has sido registradas al campo de cultivo.");
+                resultArray.add("RESPONSE_DETAIL", "");
+            } else {
+                conn.rollback();
+                resultArray.add("error", "Las bombas no se registraron al campo de cultivo.");
+                resultArray.add("RESPONSE_CODE", "FAIL");
+                resultArray.add("RESPONSE_MESSAGE", "Las bombas no se registraron al campo de cultivo.");
+                resultArray.add("RESPONSE_DETAIL", "");
+            }
+            return resultArray;
+
+        } catch (SQLException e) {
+            conn.rollback();
+            System.out.println("SaveSelectedBombTransaction::Execute> SQLException: " + e.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "SQLException");
+            resultArray.add("RESPONSE_DETAIL", e.getMessage());
+            return resultArray;
+        } catch (Exception ex) {
+            conn.rollback();
+            System.out.println("SaveSelectedBombTransaction::Execute> Exception: " + ex.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "Exception");
+            resultArray.add("RESPONSE_DETAIL", ex.getMessage());
+            return resultArray;
+        } finally {
+            CloseStatements();
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+        }
+    }
+
+    /**
+     * Generates an xmlNodeArray containing parameters for this transaction
+     *
+     * @return xmlNodeArray that contains parameters for the transaction
+     * @exception (none)
+     */
+    @Override
+    public xmlNodeArray GenerateTestParameters() {
+        xmlNodeArray nodeArr = new xmlNodeArray();
+        nodeArr.add("TRANSACTION_CLASS_TO_EXECUTE", "AgrocosaTransactions.SaveSelectedBombTransaction");
+
+        return nodeArr;
+
+    }
+
+    /**
+     * The main method for the transaction. Creates a database connection and an
+     * error Array, then executes the transaction and reports any errors
+     *
+     * @param argv argv[0] is an optional configuration file name
+     * @exception (none)
+     */
+    public static void main(String[] argv) {
+        try {
+            SaveSelectedBombTransaction transaction = new SaveSelectedBombTransaction();
+            SIDWebTransaction resultTransaction = null;
+            xmlNodeArray inputParameterArray = null;
+            //CIMDataBase database = null;
+            System.out.println("Usage: java -classpath ...AgrocosaTransactions.SaveSelectedBombTransaction");
+
+            //<Add Database connection parameter for testing>
+            database = new SIDDataBase("jdbc:mysql://localhost:3306/agrocosa", "root", "entrar123");
+
+            transaction.SetSIDDataBase(database);
+            inputParameterArray = transaction.GenerateTestParameters();
+            if (!transaction.IsValidTransaction()) {
+                System.out.println(" SaveSelectedBombTransaction contains an invalid transaction type.");
+            } else {
+                if (!transaction.Supports(inputParameterArray)) {
+                    System.out.println(" SaveSelectedBombTransaction does not support this list of parameters.");
+                } else {
+                    resultTransaction = database.ExecuteTransaction("AgrocosaTransactions.SaveSelectedBombTransaction", inputParameterArray);
+                    if (resultTransaction == null) {
+                        System.out.println("The transaction's result array is null.");
+                    } else {
+                        if (resultTransaction.GetError() != null) {
+                            resultTransaction.GetError().print();
+                        } else {
+                            if (resultTransaction.GetResultArray() == null) {
+                                System.out.println("SaveSelectedBombTransaction - No results were returned.");
+                            } else {
+                                xmlNodeArray array = resultTransaction.GetResultArray();
+                                String str = xmlNodeArray.xmlNodeArray2String(array);
+                                array = xmlNodeArray.string2xmlNodeArray(str);
+                                System.out.println(str);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("SaveSelectedBombTransaction::main> caught exception " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}

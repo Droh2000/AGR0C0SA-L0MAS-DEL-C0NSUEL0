@@ -1,0 +1,73 @@
+package AgrocosaSecurity;
+
+import SIDWebEngine.SIDServlet;
+import java.io.IOException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import xmlNodeArray.xmlNodeArray;
+
+public class SIDAuthenticationServlet extends SIDServlet {
+
+    @Override
+    protected void processRequest(HttpServletRequest request,
+            HttpServletResponse response,
+            xmlNodeArray nodeArray) throws IOException {
+        xmlNodeArray txnParameters = null;
+        xmlNodeArray txnResult = null;
+        String username = "";
+        String password = "";
+        String redirectAddress = null;
+
+        HttpSession session = null;
+
+        session = request.getSession();
+        username = request.getParameter("username");
+        password = request.getParameter("password");
+
+        redirectAddress = (String) session.getAttribute("requestAddress");
+
+        try {
+            // Authenticate user
+            txnParameters = new xmlNodeArray();
+            txnParameters.add("TRANSACTION_CLASS_TO_EXECUTE", "AgrocosaSecurity.AuthenticateUser");
+            txnParameters.add("USERNAME", username);
+            txnParameters.add("PASSWORD", password);
+
+            txnResult = this.executeTransaction(txnParameters);
+
+            if (txnResult == null) {
+                session.setAttribute("error", "ERROR"
+                        + " " + "on execute transaction.");
+                response.sendRedirect(request.getContextPath() + "/public/siteLogin.do");
+                //response.sendRedirect(request.getContextPath());
+            } else if (txnResult.find("ERROR") != null
+                    && txnResult.find("ERROR").getStringValue() != null) {
+                session.setAttribute("error", txnResult.find("ERROR").getStringValue()
+                        + " " + txnResult.find("ERROR_MSG").getStringValue());
+                response.sendRedirect(request.getContextPath() + "/public/siteLogin.do");                
+                //response.sendRedirect(request.getContextPath());                
+            } else {
+                session.setAttribute("rol", txnResult.find("ROL").getStringValue());
+                session.setAttribute("idUser", txnResult.find("IDUSER").getStringValue());
+                session.setAttribute("username", username);                
+                session.setAttribute("firstName", txnResult.find("FIRSTNAME").getStringValue());
+                session.setAttribute("lastName", txnResult.find("LASTNAME").getStringValue());
+                
+                if (redirectAddress == null) {
+                    response.sendRedirect(request.getContextPath()+"/protected/main.do");
+                } else {
+                    response.sendRedirect(request.getContextPath() + redirectAddress);
+                }
+            }
+        } catch (SecurityException se) {
+            session.setAttribute("error", "SECURITY_EXCEPTION_ERROR" + "<br>" + "<" + this.getClass().getName() + "::processRequest> SecurityException: " + se.getMessage());
+            response.sendRedirect(request.getContextPath() + "/public/siteLogin.do");
+            //response.sendRedirect(request.getContextPath());
+        } catch (IOException ioe) {
+            session.setAttribute("error", "IO_EXCEPTION_ERROR" + "<br>" + "<" + this.getClass().getName() + "::processRequest> IOException: " + ioe.getMessage());
+            response.sendRedirect(request.getContextPath() + "/public/siteLogin.do");
+            //response.sendRedirect(request.getContextPath());
+        }
+    }
+}

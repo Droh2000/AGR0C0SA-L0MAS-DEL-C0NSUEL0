@@ -1,0 +1,246 @@
+<%@ taglib uri="http://displaytag.sf.net" prefix="display"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
+
+<script type="text/javascript">
+
+    $(function () {
+
+        $('.cancelFormBtn').on("click", function () {
+            var id = $(this).attr('id');
+            id = id.replace("c", "");
+            $("#id4Cancel").val(id);
+            $('#cancelModal').modal('show');
+        });
+
+        $('.releaseFormBtn').on("click", function () {
+            var id = $(this).attr('id');
+            id = id.replace("r", "");
+            $("#id4Release").val(id);
+            $('#releaseModal').modal('show');
+        });
+    });
+
+
+
+</script>
+
+
+<!-- Content Wrapper. Contains page content -->
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <section class="content-header">
+        <h1>
+            Liberar Embarque
+            <small>Asignar Proforma #</small>
+        </h1>
+        <ol class="breadcrumb">
+            <li><a href="#"><i class="fa fa-caret-right"></i> Empaque</a></li>
+            <li class="active">Aqui</li>
+        </ol>
+    </section>
+
+    <!-- Main content -->
+    <section class="content">
+
+        <c:choose>
+            <c:when test="${requestScope.RESPONSE_CODE == 'PASS'}">                    
+                <c:if test="${requestScope.RESPONSE_MESSAGE ne 'OK'}">
+
+
+                    <div class="alert alert-success alert-dismissable">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                        <h4>	<i class="icon fa fa-check"></i> OK</h4>
+                        <c:out value="${requestScope.RESPONSE_MESSAGE}" /><br />
+                        <c:out value="${requestScope.RESPONSE_DETAIL}" />
+                    </div>
+                </c:if>
+            </c:when>
+            <c:when test="${requestScope.RESPONSE_CODE == 'FAIL'}">
+                <div class="alert alert-danger alert-dismissable">
+                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                    <h4><i class="icon fa fa-ban"></i> Error !</h4>
+                    <c:out value="${requestScope.RESPONSE_MESSAGE}" /><br />
+                    <c:out value="${requestScope.RESPONSE_DETAIL}" />
+                </div>
+
+            </c:when>
+        </c:choose>
+
+        <!-- Search Meeting -->
+        <form name="formsearch" role="form" action="releaseStockTransferOrder.do" method="post">
+            <div class="box box-success">
+                <div class="box-header with-border">
+                    <h3 class="box-title">Liberar Embarque</h3>
+                    <div class="box-tools pull-right">
+                        <button class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                    </div>
+                </div><!-- /.box-header -->
+                <div class="box-body">
+
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label >Transportista</label>
+                            <select name="transportCompanyName" id="transportCompanyName" class="form-control">
+                                <option value=""></option>
+                                <c:forEach items="${TransportCompany_HashMap}" var="item">
+                                    <option value="${item.value}"  ${requestScope.SelectedTransportCompanyName == item.value  ? 'selected' : ''}>${item.value}</option>
+                                </c:forEach>
+                            </select>                                                
+                        </div>
+                    </div>
+                </div><!-- /.box-body -->
+                <div class="box-footer">
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-search"></i> Consultar</button>
+                </div>
+            </div><!-- /.box -->
+        </form>  
+
+        <div class="box box-success">
+            <div class="box-header with-border">
+                <h3 class="box-title">Embarques listos para liberar</h3>
+                <div class="box-tools pull-right">
+                    <button class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                </div>
+            </div><!-- /.box-header -->
+            <div class="box-body">
+                <div class="table-responsive">
+                    <table id="dtable" class="table table-bordered table-striped table-hover">
+                        <thead>
+                            <tr>    
+                                <th>ID</th>
+                                <th>Transportista</th>
+                                <th>Nombre de Chofer</th>
+                                <th>Placas</th>
+                                <th>Proforma</th>
+                                <th>Estatus</th>
+                                <th>Registrado Por</th>
+                                <th>Fecha de Registro</th>
+                                <th>Liberar</th>
+                                <th>Cancelar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            <c:forEach items="${StockTransferOrderInfo_Table}" var="row" varStatus="status">
+                                <tr>                                 
+                                    <td>${row.idStockTransferOrder}</td>
+                                    <td>${row.TransportCompany}</td>
+                                    <td>${row.TruckDriverName}</td>
+                                    <td>${row.TruckPlate}</td>
+                                    <td>${row.Proforma}</td>
+                                    <td>${row.Status}</td>
+                                    <td>${row.User}</td>
+                                    <td>${row.InsertDate}</td>
+                                    <td>
+                                        <button type="button" name="r${row.idStockTransferOrder}" id="r${row.idStockTransferOrder}" class="btn btn-primary xxs releaseFormBtn" title ="Liberar" onclick="">
+                                            <i class="fa fa-truck"></i>
+                                        </button>                                                                                   
+                                    </td>
+                                    <td>
+                                        <button type="button" name="c${row.idStockTransferOrder}" id="c${row.idStockTransferOrder}" class="btn btn-primary xxs cancelFormBtn" title ="Cancelar" onclick="">
+                                            <i class="fa fa-trash"></i>
+                                        </button>                                               
+                                    </td>
+                                </tr>
+                            </c:forEach>
+                        </tbody>
+                    </table> 
+                </div>
+
+            </div><!-- /.box-body -->
+        </div>
+
+
+        <script>
+            $('#dtable').DataTable({
+                "paging": false,
+                "lengthChange": false,
+                "searching": true,
+                "ordering": false,
+                "info": false,
+                "autoWidth": false,
+                "dom": 'T<"clear">lfrtip',
+                "tableTools": {
+                    "sSwfPath": "../plugins/datatables/extensions/TableTools/swf/copy_csv_xls_pdf.swf"
+                }
+            });
+
+        </script>
+
+
+
+
+    </section><!-- /.content -->
+</div><!-- /.content-wrapper -->
+
+
+<div class="modal fade" id="cancelModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form name="formCancel" action="releaseStockTransferOrder.do" method="post">
+                <div class="modal-header alert-warning">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel"><i class="icon fa fa-trash"></i> Cancelar Embarque</h4>
+                </div>
+                <div class="modal-body">
+                    <p><h3>Esta usted seguro de cancelar este embarque?</h3></p>
+                    <div class="form-group">
+                        <label>Comentarios</label>
+                        <textarea name="comments" class="form-control" rows="5" id="comments" required></textarea>
+                    </div>
+                    <input type="hidden" name="idStockTransferOrder" id="id4Cancel" value=""/>
+                    <input type="hidden" name="Action" id="Action" value="Cancel"/>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary pull-left" data-dismiss="modal">No</button>
+                    <button type="submit" id="btnConfirmYes" class="btn btn-primary pull-right">Si</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="releaseModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form name="formRelease" action="releaseStockTransferOrder.do" method="post">
+                <div class="modal-header alert-success">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel"><i class="icon fa fa-truck"></i> Liberar Embarque</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Proforma #</label>                                                
+                        <div class="form-group">
+                            <input type="text" name="proforma" class="form-control" placeholder="Proforma #" data-title="No puede estar vacio" required value="${requestScope.SelectedProforma}" />
+                        </div>                                    
+                    </div>
+                    <h5>Formato valido: 2 digitos de año actual + 4 digitos de numero consecutivo.</h5>
+                    <h5>Cualquier letras o caracteres especiales son invalidos.</h5>
+                    <input type="hidden" name="idStockTransferOrder" id="id4Release" value=""/>
+                    <input type="hidden" name="Action" id="Action" value="Release"/>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary pull-left" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" id="btnConfirmYes" class="btn btn-primary pull-right">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<c:if test="false">
+    <c:forEach items='${requestScope}' var='p'>
+        <ul>
+            <%-- Display the key of the current item, which
+                 represents the parameter name --%>
+            <li>Parameter Name: <c:out value='${p.key}'/></li>
+
+            <%-- Display the value of the current item, which
+                 represents the parameter value --%>
+            <li>Parameter Value: <c:out value='${p.value}'/></li>
+        </ul>
+    </c:forEach>
+</c:if>

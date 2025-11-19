@@ -1,0 +1,641 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package AgrocosaTransactions;
+
+import SIDWebEngine.*;
+import java.sql.*;
+import xmlNodeArray.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+
+public class SaveNewTaskProductAndAspertionTransaction extends SIDWebTransaction {
+
+    protected PreparedStatement pstmtTaskInfo;
+
+    protected PreparedStatement pstmtInsertTaskProduct;
+    protected PreparedStatement pstmtDeleteTaskProduct;
+
+    protected PreparedStatement pstmtInsertTaskHistory;
+
+    protected PreparedStatement pstmtUser;
+
+    protected PreparedStatement pstmtInsertTaskAspertion;
+    protected PreparedStatement pstmtDeleteTaskAspertion;
+
+    protected PreparedStatement pstmtRetrieveAgrochemicalProduct;
+
+    /**
+     * Default Constructor
+     *
+     * @exception (none)
+     */
+    public SaveNewTaskProductAndAspertionTransaction() {
+        super();
+        SetTransactionType(SIDWebTransaction.SaveType);
+    }
+
+    /**
+     * Checks to see if the node Array is supported
+     *
+     * @param nodeArray
+     * @return <B>true</B> if the nodeArray is supported. <B>false</B> otherwise
+     * @exception (none)
+     */
+    @Override
+    public boolean Supports(xmlNodeArray nodeArray) {
+
+        //Add tag names as comma separated Strings to the mandatoryTags array
+        String[] mandatoryTags = {
+            "idUser",
+            "idTask"
+        };
+
+        //Add tag names as comma separated Strings to the optionalTags array
+        String[] optionalTags = {};
+        //Add tag names as comma separated Strings to the mandatorySets array
+        String[] mandatorySets = {};
+        //Add tag names as comma separated Strings to the optionalSetTags array
+        String[] optionalSets = {};
+
+        xmlNodeArray errArray = new xmlNodeArray();
+        for (int i = 0; i < mandatoryTags.length; i++) {
+            if (!nodeArray.existValue(mandatoryTags[i])) {
+                System.out.println("<SaveNewTaskProductAndAspertionTransaction::Supports> " + mandatoryTags[i] + " Mandatory tag not found or value is empty/null");
+                errArray.add("ERROR", "MANDATORY_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalTags.length; i++) {
+            if (nodeArray.exist(optionalTags[i]) && !nodeArray.existValue(optionalTags[i])) {
+                System.out.println("<SaveNewTaskProductAndAspertionTransaction::Supports> " + optionalTags[i] + " Optional tag not found or value is empty/null");
+                errArray.add("OPTIONAL_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < mandatorySets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) == null || nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0) {
+                System.out.println("<SaveNewTaskProductAndAspertionTransaction::Supports> " + mandatorySets[i] + " Mandatory Set not found or value is empty/null");
+                errArray.add("MANDATORY_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalSets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) != null && (nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0)) {
+                System.out.println("<SaveNewTaskProductAndAspertionTransaction::Supports> " + optionalSets[i] + " Optional Set not found or value is empty/null");
+                errArray.add("OPTIONAL_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prepares the SQL statements to be executed
+     *
+     * @return <B>true</B> for successful preparation; <B>false</B> for
+     * unsuccessful preparation
+     * @exception (none)
+     */
+    @Override
+    public synchronized boolean PrepareStatements() {
+        //Note1 : Use PreparedStatements instead of Statements where ever possible
+        //Note2 : If transaction contains no prepared statements, delete entire function
+        //        Unless there are nested transaction, then Prepare will call those.
+        try {
+            Connection con = this.GetSIDDataBase().GetConnection();
+
+            pstmtTaskInfo = con.prepareStatement("select *, "
+                    + "date_format(TaskDate,'%d/%m/%Y') as fTaskDate "
+                    + "from taskhistory "
+                    + "where idTask = ? "
+                    + "and status  = 'Nueva' ");
+
+            pstmtInsertTaskProduct = con.prepareStatement("Insert into taskproduct ( "
+                    + "idTask, "
+                    + "idAgrochemical, "
+                    + "AgrochemicalName, "
+                    + "Brand, "
+                    + "ActiveIngredient, "
+                    + "MinDose, "
+                    + "MaxDose, "
+                    + "UOM, "
+                    + "AgrochemicalType, "
+                    + "SecurityInterval, "
+                    + "DelayPeriod, "
+                    + "Lote, "
+                    + "Caducity, "
+                    + "Total, "
+                    + "idUser, "
+                    + "InsertDate, "
+                    + "ModifiedDate, "
+                    + "Active "
+                    + ")Values( "
+                    + "?, "//1 idTask
+                    + "?, "//2 idAgrochemical
+                    + "?, "//3 AgrochemicalName
+                    + "?, "//4 Brand
+                    + "?, "//5 ActiveIngredient
+                    + "?, "//6 MinDose
+                    + "?, "//7 MaxDose
+                    + "?, "//8 UOM
+                    + "?, "//9 AgrochemicalType
+                    + "?, "//10 SecurityInterval
+                    + "?, "//11 DelayPeriod
+                    + "?, "//12 Lote
+                    + "?, "//13 Caducity
+                    + "?, "//14 Total
+                    + "?, "//15 idUser
+                    + "Now(), " //  InsertDate
+                    + "Now(), " //  ModifiedDate
+                    + "1 " //  Active                    
+                    + ")");
+
+            pstmtDeleteTaskProduct = con.prepareStatement("delete "
+                    + "from taskproduct "
+                    + "where idTask = ?");
+
+            pstmtInsertTaskHistory = con.prepareStatement("insert into taskhistory ( "
+                    + "idTask, "
+                    + "TaskType, "
+                    + "CampName, "
+                    + "SectionName, "
+                    + "LaborTypeName, "
+                    + "SectionCrop, "
+                    + "TaskDate, "
+                    + "Status, "
+                    + "Comments, "
+                    + "User, "
+                    + "InsertDate, "
+                    + "SupervisorName "
+                    + ") values( "
+                    + "?, "//1 idTask
+                    + "?, "//2 TaskTYpe
+                    + "?, " //3 CAmpName
+                    + "?, " //4 SectionName
+                    + "?, " //5 LaborTypeName
+                    + "?, " //6 SectionCrop
+                    + "STR_TO_DATE(?,'%d/%m/%Y'), " //7 TaskDate
+                    + "?, "//8 Status
+                    + "?, "//8 Comments
+                    + "?, "//10 User
+                    + "Now(), "
+                    + "? " //11 Supervisor Name
+                    + ")");
+
+            pstmtUser = con.prepareStatement("select concat(FirstName,' ',LastName) User "
+                    + "from user "
+                    + "where idUser = ? ");
+
+            pstmtInsertTaskAspertion = con.prepareStatement("Insert into taskaspertion ( "
+                    + "idTask, "
+                    + "DayCondition, "
+                    + "AirVelocity, "
+                    + "Temperature, "
+                    + "Direction, "
+                    + "Humidity, "
+                    + "Beak, "
+                    + "SprinklerName, "
+                    + "Pressure, "
+                    + "Expenditure, "
+                    + "StartVelocity, "
+                    + "Comments, "
+                    + "idUser, "
+                    + "InsertDate, "
+                    + "ModifiedDate, "
+                    + "Active "
+                    + ")Values( "
+                    + "?, "//1 idTask
+                    + "?, "//2 Condition
+                    + "?, "//3 AirVelocity
+                    + "?, "//4 Temperature
+                    + "?, "//5 Direction
+                    + "?, "//6 Humidity
+                    + "?, "//7 Beak
+                    + "?, "//8 SprinklerName
+                    + "?, "//9 Pressure
+                    + "?, "//10 Expenditure
+                    + "?, "//11 StartVelocity
+                    + "?, "//12 Comments
+                    + "?, "//13 idUser
+                    + "Now(), " //  InsertDate
+                    + "Now(), " //  ModifiedDate
+                    + "1 " //  Active                    
+                    + ")");
+
+            pstmtDeleteTaskAspertion = con.prepareStatement("delete "
+                    + "from taskaspertion "
+                    + "where idTask = ?");
+
+            pstmtRetrieveAgrochemicalProduct = con.prepareStatement("select "
+                    + "agrochemical.idAgrochemical, "
+                    + "AgrochemicalType, "
+                    + "AgrochemicalName, "
+                    + "Brand, "
+                    + "ActiveIngredient, "
+                    + "MinDose, "
+                    + "MaxDose, "
+                    + "UOM, "
+                    + "agrochemicaldetail.idCropType, "
+                    + "SecurityInterval, "
+                    + "DelayPeriod "
+                    + "from agrochemical inner join "
+                    + "agrochemicaldetail on agrochemicaldetail.idAgrochemical = agrochemical.idAgrochemical "
+                    + "Where agrochemical.Active = 1 "
+                    + "and agrochemicaldetail.Active = 1 "
+                    + "and agrochemicaldetail.idCropType in ( "
+                    + "select crop.idCropType "
+                    + "from task inner join "
+                    + "tasksection on tasksection.idTask = task.idTask inner join "
+                    + "campsection on campsection.SectionName = tasksection.SectionName inner join "
+                    + "sectioncrop on sectioncrop.idCampSection = campsection.idCampSection inner join "
+                    + "crop on crop.idCrop = sectioncrop.idCrop "
+                    + "where task.idTask = ? "
+                    + "and tasksection.Active = 1 "
+                    + "and campsection.Active = 1 "
+                    + "and sectioncrop.Active = 1 "
+                    + "and crop.Active = 1 "
+                    + "Group by crop.idCropType "
+                    + ") "
+                    + "Order by AgrochemicalType, "
+                    + "AgrochemicalName, "
+                    + "Brand ");
+
+            this.addPreparedStatement(pstmtTaskInfo);
+            this.addPreparedStatement(pstmtInsertTaskProduct);
+            this.addPreparedStatement(pstmtDeleteTaskProduct);
+            this.addPreparedStatement(pstmtInsertTaskHistory);
+            this.addPreparedStatement(pstmtUser);
+            this.addPreparedStatement(pstmtInsertTaskAspertion);
+            this.addPreparedStatement(pstmtDeleteTaskAspertion);
+            this.addPreparedStatement(pstmtRetrieveAgrochemicalProduct);
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("SaveNewTaskProductAndAspertionTransaction::PrepareStatements> SQLException: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * executes sql statements using input arguments and returns result
+     *
+     * @return valid node array if successful else null
+     * @exception SQLException if sql error occurs
+     * @exception Exception if non sql error occurs
+     */
+    @Override
+    public synchronized xmlNodeArray Execute() throws SQLException, Exception {
+        Connection conn = null;
+        xmlNodeArray resultArray = null;
+        ResultSet rset = null;
+        int rowsAffected = 0;
+        int idTask = 0;
+        int idUser = 0;
+        String userName = "";
+        String taskType = "";
+        String campName = "";
+        String sectionName = "";
+        String laborTypeName = "";
+        String sectionCrop = "";
+        String ftaskDate = "";
+        String comments = "";
+        String supervisorName = "";
+        boolean boolSaveProductHistory = false;
+        boolean boolSaveAspertionHistory = false;
+
+        String idAgrochemical = "";
+        String agrochemicalName = "";
+        String brand = "";
+        String activeIngredient = "";
+        String minDose = "";
+        String maxDose = "";
+        String uom = "";
+        String agrochemicalType = "";
+        String securityInterval = "";
+        String delayPeriod = "";
+
+        String lote = "";
+        String caducity = "";
+        String total = "";
+
+        String condition = "";
+        String velocity = "";
+        String temperature = "";
+        String direction = "";
+        String humidity = "";
+        String beak = "";
+        String sprinklerName = "";
+        String pressure = "";
+
+        String expenditure = "";
+        String startVelocity = "";
+
+        String validateInputs = "";
+
+        try {
+
+            conn = this.GetSIDDataBase().GetConnection();
+            conn.setAutoCommit(false);
+            resultArray = new xmlNodeArray();
+
+            idUser = GetNodeArray().find("idUser").getIntValue();
+            idTask = GetNodeArray().find("idTask").getIntValue();
+            resultArray.add("idTask", idTask);
+
+            pstmtUser.setInt(1, idUser);
+            rset = pstmtUser.executeQuery();
+            if (rset.next()) {
+                userName = rset.getString("User");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            pstmtTaskInfo.setInt(1, idTask);
+            rset = pstmtTaskInfo.executeQuery();
+            if (rset.next()) {
+                taskType = rset.getString("TaskType");
+                campName = rset.getString("CampName");
+                sectionName = rset.getString("SectionName");
+                laborTypeName = rset.getString("LaborTypeName");
+                sectionCrop = rset.getString("SectionCrop");
+                ftaskDate = rset.getString("fTaskDate");
+                supervisorName = rset.getString("User");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            //delete 
+            pstmtDeleteTaskProduct.setInt(1, idTask);
+            pstmtDeleteTaskProduct.executeUpdate();
+
+            //Insert Task Product
+            pstmtRetrieveAgrochemicalProduct.setInt(1, idTask);
+            rset = pstmtRetrieveAgrochemicalProduct.executeQuery();
+            while (rset.next()) {
+                idAgrochemical = rset.getString("idAgrochemical");
+                agrochemicalName = rset.getString("AgrochemicalName");
+                brand = rset.getString("Brand");
+                activeIngredient = rset.getString("ActiveIngredient");
+                minDose = rset.getString("MinDose");
+                maxDose = rset.getString("MaxDose");
+                uom = rset.getString("UOM");
+                agrochemicalType = rset.getString("agrochemicalType");
+                securityInterval = rset.getString("SecurityInterval");
+                delayPeriod = rset.getString("DelayPeriod");
+
+                validateInputs = "";
+
+                lote = "";
+                if (this.GetNodeArray().existValue("lote" + idAgrochemical)) {
+                    lote = GetNodeArray().find("lote" + idAgrochemical).getStringValue();
+                    validateInputs += "1";
+                }else{
+                    validateInputs += "0";
+                }
+                
+                caducity = "";
+                if (this.GetNodeArray().existValue("caducity" + idAgrochemical)) {
+                    caducity = GetNodeArray().find("caducity" + idAgrochemical).getStringValue();
+                    validateInputs += "1";
+                }else{
+                    validateInputs += "0";
+                }
+                
+                total = "";
+                if (this.GetNodeArray().existValue("total" + idAgrochemical)) {
+                    total = GetNodeArray().find("total" + idAgrochemical).getStringValue();
+                    validateInputs += "1";
+                }else{
+                    validateInputs += "0";
+                }
+
+                if (!validateInputs.contains("0")) {
+                    pstmtInsertTaskProduct.setInt(1, idTask);
+                    pstmtInsertTaskProduct.setString(2, idAgrochemical);
+                    pstmtInsertTaskProduct.setString(3, agrochemicalName);
+                    pstmtInsertTaskProduct.setString(4, brand);
+                    pstmtInsertTaskProduct.setString(5, activeIngredient);
+                    pstmtInsertTaskProduct.setString(6, minDose);
+                    pstmtInsertTaskProduct.setString(7, maxDose);
+                    pstmtInsertTaskProduct.setString(8, uom);
+                    pstmtInsertTaskProduct.setString(9, agrochemicalType);
+                    pstmtInsertTaskProduct.setString(10, securityInterval);
+                    pstmtInsertTaskProduct.setString(11, delayPeriod);
+                    pstmtInsertTaskProduct.setString(12, lote);
+                    pstmtInsertTaskProduct.setString(13, caducity);
+                    pstmtInsertTaskProduct.setString(14, total);
+                    pstmtInsertTaskProduct.setInt(15, idUser);
+                    rowsAffected = pstmtInsertTaskProduct.executeUpdate();
+                    if (rowsAffected > 0) {
+                        boolSaveProductHistory = true;
+                    }
+                }
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            //ASPERTION
+            //validate fields
+            if (this.GetNodeArray().existValue("condition")) {
+                condition = GetNodeArray().find("condition").getStringValue();
+                resultArray.add("SelectedCondition", condition);
+            }
+            if (this.GetNodeArray().existValue("velocity")) {
+                velocity = GetNodeArray().find("velocity").getStringValue();
+                resultArray.add("SelectedVelocity", velocity);
+            }
+            if (this.GetNodeArray().existValue("temperature")) {
+                temperature = GetNodeArray().find("temperature").getStringValue();
+                resultArray.add("SelectedTemperature", temperature);
+            }
+            if (this.GetNodeArray().existValue("direction")) {
+                direction = GetNodeArray().find("direction").getStringValue();
+                resultArray.add("SelectedDirection", direction);
+            }
+            if (this.GetNodeArray().existValue("humidity")) {
+                humidity = GetNodeArray().find("humidity").getStringValue();
+                resultArray.add("SelectedHumidity", humidity);
+            }
+            if (this.GetNodeArray().existValue("beak")) {
+                beak = GetNodeArray().find("beak").getStringValue();
+                resultArray.add("SelectedBeak", beak);
+            }
+            if (this.GetNodeArray().existValue("sprinklerName")) {
+                sprinklerName = GetNodeArray().find("sprinklerName").getStringValue();
+                resultArray.add("SelectedSprinklerName", sprinklerName);
+            }
+            if (this.GetNodeArray().existValue("pressure")) {
+                pressure = GetNodeArray().find("pressure").getStringValue();
+                resultArray.add("SelectedPressure", pressure);
+            }
+            if (this.GetNodeArray().existValue("expenditure")) {
+                expenditure = GetNodeArray().find("expenditure").getStringValue();
+                resultArray.add("SelectedExpenditure", expenditure);
+            }
+            if (this.GetNodeArray().existValue("startVelocity")) {
+                startVelocity = GetNodeArray().find("startVelocity").getStringValue();
+                resultArray.add("SelectedStartVelocity", startVelocity);
+            }
+            if (this.GetNodeArray().existValue("comments")) {
+                comments = GetNodeArray().find("comments").getStringValue();
+                resultArray.add("SelectedComments", comments);
+            }
+
+            //delete 
+            pstmtDeleteTaskAspertion.setInt(1, idTask);
+            pstmtDeleteTaskAspertion.executeUpdate();
+
+            //insert
+            pstmtInsertTaskAspertion.setInt(1, idTask);
+            pstmtInsertTaskAspertion.setString(2, condition);
+            pstmtInsertTaskAspertion.setString(3, velocity);
+            pstmtInsertTaskAspertion.setString(4, temperature);
+            pstmtInsertTaskAspertion.setString(5, direction);
+            pstmtInsertTaskAspertion.setString(6, humidity);
+            pstmtInsertTaskAspertion.setString(7, beak);
+            pstmtInsertTaskAspertion.setString(8, sprinklerName);
+            pstmtInsertTaskAspertion.setString(9, pressure);
+            pstmtInsertTaskAspertion.setString(10, expenditure);
+            pstmtInsertTaskAspertion.setString(11, startVelocity);
+            pstmtInsertTaskAspertion.setString(12, comments);
+            pstmtInsertTaskAspertion.setInt(13, idUser);
+            rowsAffected = pstmtInsertTaskAspertion.executeUpdate();
+            if (rowsAffected > 0) {
+                boolSaveAspertionHistory = true;
+            }
+
+            if (boolSaveProductHistory && boolSaveAspertionHistory) {
+                pstmtInsertTaskHistory.setInt(1, idTask);
+                pstmtInsertTaskHistory.setString(2, taskType);
+                pstmtInsertTaskHistory.setString(3, campName);
+                pstmtInsertTaskHistory.setString(4, sectionName);
+                pstmtInsertTaskHistory.setString(5, laborTypeName);
+                pstmtInsertTaskHistory.setString(6, sectionCrop);
+                pstmtInsertTaskHistory.setString(7, ftaskDate);
+                pstmtInsertTaskHistory.setString(8, "En Proceso");
+                pstmtInsertTaskHistory.setString(9, comments);
+                pstmtInsertTaskHistory.setString(10, userName);
+                pstmtInsertTaskHistory.setString(11, supervisorName);
+                rowsAffected = pstmtInsertTaskHistory.executeUpdate();
+
+                if (rowsAffected > 0) {
+                    conn.commit();
+                    resultArray.add("RESPONSE_CODE", "PASS");
+                    resultArray.add("RESPONSE_MESSAGE", "La informacion ha sido registrada exitosamente.");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                } else {
+                    conn.rollback();
+                    resultArray.add("error", "La informacion no pudo ser registrada.");
+                    resultArray.add("RESPONSE_CODE", "FAIL");
+                    resultArray.add("RESPONSE_MESSAGE", "La informacion no pudo ser registrada.");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                }
+
+            }
+
+            return resultArray;
+        } catch (SQLException e) {
+            conn.rollback();
+            System.out.println("SaveNewTaskProductAndAspertionTransaction::Execute> SQLException: " + e.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "SQLException:" + e.getMessage());
+            resultArray.add("RESPONSE_DETAIL", e.getMessage());
+            return resultArray;
+        } catch (Exception ex) {
+            conn.rollback();
+            System.out.println("SaveNewTaskProductAndAspertionTransaction::Execute> Exception: " + ex.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "Exception:" + ex.getMessage());
+            resultArray.add("RESPONSE_DETAIL", ex.getMessage());
+            return resultArray;
+        } finally {
+            CloseStatements();
+//            System.out.println("<SaveNewTaskProductAndAspertionTransaction::Execute> exit");
+        }
+    }
+
+    /**
+     * Generates an xmlNodeArray containing parameters for this transaction
+     *
+     * @return xmlNodeArray that contains parameters for the transaction
+     * @exception (none)
+     */
+    @Override
+    public xmlNodeArray GenerateTestParameters() {
+        xmlNodeArray nodeArr = new xmlNodeArray();
+        nodeArr.add("TRANSACTION_CLASS_TO_EXECUTE", "AgrocosaTransactions.SaveNewTaskProductAndAspertionTransaction");
+
+        return nodeArr;
+
+    }
+
+    /**
+     * The main method for the transaction. Creates a database connection and an
+     * error Array, then executes the transaction and reports any errors
+     *
+     * @param argv argv[0] is an optional configuration file name
+     * @exception (none)
+     */
+    public static void main(String[] argv) {
+        try {
+            SaveNewTaskProductAndAspertionTransaction transaction = new SaveNewTaskProductAndAspertionTransaction();
+            SIDWebTransaction resultTransaction = null;
+            xmlNodeArray inputParameterArray = null;
+            //CIMDataBase database = null;
+            System.out.println("Usage: java -classpath ...AgrocosaTransactions.SaveNewTaskProductAndAspertionTransaction");
+
+            //<Add Database connection parameter for testing>
+            database = new SIDDataBase("jdbc:mysql://localhost:3306/agrocosa", "root", "entrar123");
+
+            transaction.SetSIDDataBase(database);
+            inputParameterArray = transaction.GenerateTestParameters();
+            if (!transaction.IsValidTransaction()) {
+                System.out.println(" SaveNewTaskProductAndAspertionTransaction contains an invalid transaction type.");
+            } else {
+                if (!transaction.Supports(inputParameterArray)) {
+                    System.out.println(" SaveNewTaskProductAndAspertionTransaction does not support this list of parameters.");
+                } else {
+                    resultTransaction = database.ExecuteTransaction("AgrocosaTransactions.SaveNewTaskProductAndAspertionTransaction", inputParameterArray);
+                    if (resultTransaction == null) {
+                        System.out.println("The transaction's result array is null.");
+                    } else {
+                        if (resultTransaction.GetError() != null) {
+                            resultTransaction.GetError().print();
+                        } else {
+                            if (resultTransaction.GetResultArray() == null) {
+                                System.out.println("SaveNewTaskProductAndAspertionTransaction - No results were returned.");
+                            } else {
+                                xmlNodeArray array = resultTransaction.GetResultArray();
+                                String str = xmlNodeArray.xmlNodeArray2String(array);
+                                array = xmlNodeArray.string2xmlNodeArray(str);
+                                System.out.println(str);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("SaveNewTaskProductAndAspertionTransaction::main> caught exception " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}

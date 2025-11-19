@@ -1,0 +1,227 @@
+<%@ taglib uri="http://displaytag.sf.net" prefix="display"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
+
+
+<script type="text/javascript">
+    $(function () {
+        $('.detailFormBtn').on("click", function () {
+            var id = $(this).attr('id');
+            $("#selectedId").val(id);
+            $("#pickup").val($("#p" + id).text());
+            $("#trailerType").val($("#t" + id).text());
+            $("#weight").val($("#w" + id).text());
+            $("#driverName").val($("#dn" + id).text());
+            $("#driverTel").val($("#dt" + id).text());
+            $("#trucking").val($("#tr" + id).text());
+
+            $('#myModal').modal('show');
+        });
+    });
+
+
+
+</script>
+<div class="" >
+    <div style="content-wrapper">
+        <section class="content-header">
+            <h1>
+                Deliveries
+                <small>Product Delivery</small>
+            </h1>
+        </section>
+
+        <!-- Main content -->
+        <section class="content">
+
+            <c:choose>
+                <c:when test="${requestScope.RESPONSE_CODE == 'PASS'}">                    
+                    <c:if test="${requestScope.RESPONSE_MESSAGE ne 'OK'}">
+
+
+                        <div class="alert alert-success alert-dismissable">
+                            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                            <h4>	<i class="icon fa fa-check"></i> OK</h4>
+                            <c:out value="${requestScope.RESPONSE_MESSAGE}" /><br />
+                            <c:out value="${requestScope.RESPONSE_DETAIL}" />
+                        </div>
+                    </c:if>
+                </c:when>
+                <c:when test="${requestScope.RESPONSE_CODE == 'FAIL'}">
+                    <div class="alert alert-danger alert-dismissable">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                        <h4><i class="icon fa fa-ban"></i> Error !</h4>
+                        <c:out value="${requestScope.RESPONSE_MESSAGE}" /><br />
+                        <c:out value="${requestScope.RESPONSE_DETAIL}" />
+                    </div>
+
+                </c:when>
+            </c:choose>
+
+
+
+
+            <c:if test="${requestScope.DeliveryReport_Table ne null}">
+
+                <div class="box box-success">
+                    <div class="box-header with-border">
+                        <h3 class="box-title"> Entregas</h3>
+                        <div class="box-tools pull-right">
+                            <div class="pull-left"></div>                        
+                            <button class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                        </div>
+                    </div><!-- /.box-header -->
+                    <div class="box-body">
+                        <div class="table-responsive">
+                            <table id="dtable" class="table table-bordered table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Deliver</th>
+                                        <th>Number</th>  
+                                        <th>Pickup</th>                                    
+                                        <th>Trailer</th>                                    
+                                        <th>Quantity</th>
+                                        <th>Concept</th>
+                                        <th>Weight</th>
+                                        <th>Measure</th>                                    
+                                        <th>Driver Name</th>                                    
+                                        <th>Driver Phone</th>                                    
+                                        <th>Trucking</th>                                    
+                                        <th>Commentss</th>                                    
+                                        <th>Destiny</th>                                    
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <c:forEach items="${DeliveryReport_Table}" var="row" varStatus="status">
+                                        <tr>
+                                            <td>
+                                                <button type="button" name="${row.idDelivery}" id="${row.idDelivery}" class="btn btn-primary xxs detailFormBtn" title ="Entregar" onclick="">
+                                                    <i class="fa fa-truck"></i>
+                                                </button>
+                                            </td>
+                                            <td>${row.idDelivery}</td>
+                                            <td id="p${row.idDelivery}">${row.PickupNumber}</td>
+                                            <td id="t${row.idDelivery}">${row.TrailerType}</td>
+                                            <td>${row.Quantity}</td>
+                                            <td>${row.Charge}</td>
+                                            <td id="w${row.idDelivery}">${row.Weight}</td>
+                                            <td>${row.UOM}</td>
+                                            <td id="dn${row.idDelivery}">${row.DriverName}</td>
+                                            <td id="dt${row.idDelivery}">${row.DriverTel}</td>
+                                            <td id="tr${row.idDelivery}">${row.Trucking}</td>
+                                            <td>${row.Comments}</td>
+                                            <td>${row.Destination}</td>
+                                        </tr>
+                                    </c:forEach>
+                                </tbody>
+                            </table> 
+                        </div>
+                    </div><!-- /.box-body -->
+                    <div class="box-footer"></div>
+                </div>
+            </c:if>        
+
+            <script>
+                $('#dtable').DataTable({
+                    "paging": false,
+                    "lengthChange": false,
+                    "searching": true,
+                    "ordering": false,
+                    "info": false,
+                    "autoWidth": false,
+                    "dom": 'lfrtip',
+                    "tableTools": {
+                        "sSwfPath": "../plugins/datatables/extensions/TableTools/swf/copy_csv_xls_pdf.swf"
+                    }
+                });
+
+            </script>
+
+
+            <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" data-backdrop="static" data-keyboard="false">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <form name="formClose" action="deliveryReport.do" method="post">
+                            <div class="modal-header alert-success">
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                <h4 class="modal-title" id="myModalLabel"> Product Delivery</h4>
+                            </div>
+
+                            <div class="modal-body">
+                                <input type="hidden" name="Action" id="Action" value="CloseDelivery"/>
+
+                                <div class="form-group">
+                                    <label>Number: </label>
+                                    <input name="idDelivery" type="text" class="form-control pull-right" id="selectedId" value="" readonly/>
+                                </div>
+                                <div class="form-group">
+                                    <label>Action:  </label>
+                                    <select name="registrar" id="registrar" class="form-control pull-right" >
+                                        <option>Arrive</option>
+                                        <option>Delivery</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Driver Name: </label>
+                                    <input name="driverName" type="text" class="form-control pull-right" id="driverName" required value="" />
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Driver Phone: </label>
+                                    <input name="driverTel" type="text" class="form-control pull-right" id="driverTel" required value="" />
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Pickup: </label>
+                                    <input name="pickup" type="text" class="form-control pull-right" id="pickup" required value="" />
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Trailer: </label>
+                                    <input name="trailerType" type="text" class="form-control pull-right" id="trailerType" required value="" />
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Weight: </label>
+                                    <input name="weight" type="text" class="form-control pull-right" id="weight" required value="" />
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Trucking: </label>
+                                    <input name="trucking" type="text" class="form-control pull-right" id="trucking" required value="" />
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Comments </label>
+                                    <textarea name="comments" class="form-control" rows="5" id="comments"></textarea>
+                                </div>
+
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-primary pull-left" data-dismiss="modal">Close</button>
+                                <button type="submit" id="btnConfirmYes" class="btn btn-primary pull-right">Save</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <c:if test="false">
+                <c:forEach items='${requestScope}' var='p'>
+                    <ul>
+                        <%-- Display the key of the current item, which
+                             represents the parameter name --%>
+                        <li>Parameter Name: <c:out value='${p.key}'/></li>
+
+                        <%-- Display the value of the current item, which
+                             represents the parameter value --%>
+                        <li>Parameter Value: <c:out value='${p.value}'/></li>
+                    </ul>
+                </c:forEach>
+            </c:if>
+        </section><!-- /.content -->
+    </div><!-- /.content-wrapper -->
+</div>

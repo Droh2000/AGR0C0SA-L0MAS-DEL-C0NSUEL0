@@ -1,0 +1,307 @@
+package AgrocosaTransactions;
+
+import SIDWebEngine.*;
+import java.sql.*;
+import xmlNodeArray.*;
+
+/**
+ *
+ * @author Juan
+ */
+public class RetrieveShippingHistoryReportTransaction extends SIDWebTransaction {
+
+    protected Statement pstmtRetrieveReport;
+
+    /**
+     * Default Constructor
+     *
+     * @exception (none)
+     */
+    public RetrieveShippingHistoryReportTransaction() {
+        super();
+        SetTransactionType(SIDWebTransaction.RetrieveType);
+    }
+
+    /**
+     * Checks to see if the node Array is supported
+     *
+     * @param nodeArray
+     * @return <B>true</B> if the nodeArray is supported. <B>false</B> otherwise
+     * @exception (none)
+     */
+    @Override
+    public boolean Supports(xmlNodeArray nodeArray) {
+
+        //Add tag names as comma separated Strings to the mandatoryTags array
+        String[] mandatoryTags = {};
+        //Add tag names as comma separated Strings to the optionalTags array
+        String[] optionalTags = {};
+        //Add tag names as comma separated Strings to the mandatorySets array
+        String[] mandatorySets = {};
+        //Add tag names as comma separated Strings to the optionalSetTags array
+        String[] optionalSets = {};
+
+        xmlNodeArray errArray = new xmlNodeArray();
+        for (int i = 0; i < mandatoryTags.length; i++) {
+            if (!nodeArray.existValue(mandatoryTags[i])) {
+                System.out.println("<RetrieveShippingHistoryReportTransaction::Supports> " + mandatoryTags[i] + " Mandatory tag not found or value is empty/null");
+                errArray.add("ERROR", "MANDATORY_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalTags.length; i++) {
+            if (nodeArray.exist(optionalTags[i]) && !nodeArray.existValue(optionalTags[i])) {
+                System.out.println("<RetrieveShippingHistoryReportTransaction::Supports> " + optionalTags[i] + " Optional tag not found or value is empty/null");
+                errArray.add("OPTIONAL_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < mandatorySets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) == null || nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0) {
+                System.out.println("<RetrieveShippingHistoryReportTransaction::Supports> " + mandatorySets[i] + " Mandatory Set not found or value is empty/null");
+                errArray.add("MANDATORY_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalSets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) != null && (nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0)) {
+                System.out.println("<RetrieveShippingHistoryReportTransaction::Supports> " + optionalSets[i] + " Optional Set not found or value is empty/null");
+                errArray.add("OPTIONAL_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prepares the SQL statements to be executed
+     *
+     * @return <B>true</B> for successful preparation;
+     * <B>false</B> for unsuccessful preparation
+     * @exception (none)
+     */
+    @Override
+    public synchronized boolean PrepareStatements() {
+        //Note1 : Use PreparedStatements instead of Statements where ever possible
+        //Note2 : If transaction contains no prepared statements, delete entire function
+        //        Unless there are nested transaction, then Prepare will call those.
+        try {
+            Connection con = this.GetSIDDataBase().GetConnection();
+            pstmtRetrieveReport = con.createStatement();
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("RetrieveShippingHistoryReportTransaction::PrepareStatements> SQLException: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * executes sql statements using input arguments and returns result
+     *
+     * @return valid node array if successful else null
+     * @exception SQLException if sql error occurs
+     * @exception Exception if non sql error occurs
+     */
+    @Override
+    public synchronized xmlNodeArray Execute() throws SQLException, Exception {
+        xmlNodeArray resultArray = null;
+        ResultSet rset = null;
+        ResultSet rset2 = null;
+        String message = "OK";
+        String qry = "";
+        String trucking = "";
+        String status = "";
+        String startDate = "";
+        String endDate = "";
+        String proforma = "";
+
+        try {
+
+            resultArray = new xmlNodeArray();
+
+            qry = "select "
+                    + "idShippingHistory, "
+                    + "idShipping, "
+                    + "Trailer, "
+                    + "Trucking, "
+                    + "Loading, "
+                    + "Quantity, "
+                    + "Weight, "
+                    + "UOM, "
+                    + "date_format(CreationDate,'%d/%m/%Y %h:%i %p') as CreationDate, "
+                    + "IFNULL(date_format(ReceiptDate,'%d/%m/%Y %h:%i %p'),'') as ReceiptDate, "
+                    + "IFNULL(Gate,'') as Gate, "
+                    + "IFNULL(DriverName,'') as DriverName, "
+                    + "Status, "
+                    + "date_format(InsertDate,'%d/%m/%Y %h:%i %p') as InsertDate, "
+                    + "Comments "
+                    + "from shippinghistory "
+                    + "where idShippingHistory > 0 ";
+            
+            qry = "SELECT "
+                    + "sh.idShippingHistory, "
+                    + "sh.idShipping, "
+                    + "s.Proforma, "
+                    + "s.TodayCol, "
+                    + "s.Entry, "
+                    + "s.Trailer, "
+                    + "s.Seal, "
+                    + "sh.Status, "
+                    + "coalesce(s.InsertDate,'') as InsertDate, "
+                    + "coalesce(sh.Gate,'') as Gate, "
+                    + "coalesce(sh.Line,'') as Line, "
+                    + "coalesce(sh.DriverName, '') as DriverName, "
+                    + "coalesce(sh.ReceiptDate,'') as ReceiptDate, "
+                    + "concat(if(Lbs>0,concat('LBS   -----   ',Lbs,'<br />'),'') , if(SSaxDi>0,concat('# S Sax   Di   -----   ',SSaxDi,'<br />'),'') , if(SSaxGreen>0,concat('# S Sax  Green   -----   ',SSaxGreen,'<br />'),'') , if(SSaxPurple>0,concat('# S Sax   Purple   -----   ',SSaxPurple,'<br />'),'') , if(SSaxBlue>0,concat('# S Sax  Blue   -----   ',SSaxBlue,'<br />'),'') , if(SSaxCF>0,concat('# S Sax  CF   -----   ',SSaxCF,'<br />'),'') , if(Kg>0,concat('Kg   -----   ',Kg,'<br />'),'') , if(Rp>0,concat('RP   -----   ',Rp,'<br />'),'') , if(Fc>0,concat('FC   -----   ',Fc,'<br />'),'') , if(Ox>0,concat('OX   -----   ',Ox,'<br />'),'') , if(50SCY>0,concat('50#  SC Y   -----   ',50SCY,'<br />'),'') , if(50CY>0,concat('50#  C Y   -----   ',50CY,'<br />'),'') , if(50JY>0,concat('50#  J Y   -----   ',50JY,'<br />'),'') , if(50LMY>0,concat('50#  LM Y   -----   ',50LMY,'<br />'),'') , if(20SMY>0,concat('50#  SM Y   -----   ',20SMY,'<br />'),'') , if(25JY>0,concat('25#  J Y   -----   ',25JY,'<br />'),'') , if(25LMY>0,concat('25#  LM Y   -----   ',25LMY,'<br />'),'') , if(25SMY>0,concat('25# SM Y   -----   ',25SMY,'<br />'),'') , if(40CJY>0,concat('40c J Y   -----   ',40CJY,'<br />'),'') , if(50CW>0,concat('50#  C W   -----   ',50CW,'<br />'),'') , if(50JW>0,concat('50#  J W   -----   ',50JW,'<br />'),'') , if(50LMW>0,concat('50# LM W   -----   ',50LMW,'<br />'),'') , if(50SMW>0,concat('50#  SM W   -----   ',50SMW,'<br />'),'') , if(25CW>0,concat('25#  C W   -----   ',25CW,'<br />'),'') , if(25JW>0,concat('25#  J W   -----   ',25JW,'<br />'),'') , if(25LMW>0,concat('25#  LM W   -----   ',25LMW,'<br />'),'') , if(50CR>0,concat('50#  C R   -----   ',50CR,'<br />'),'') , if(50JR>0,concat('50#  J R   -----   ',50JR,'<br />'),'') , if(50LMR>0,concat('50#  LM R   -----   ',50LMR,'<br />'),'') , if(50SMR>0,concat('50# SM R   -----   ',50SMR,'<br />'),'') , if(50PPR>0,concat('50# PP R   -----   ',50PPR,'<br />'),'') , if(25CR>0,concat('25#  C R   -----   ',25CR,'<br />'),'') , if(25JR>0,concat('25# J R   -----   ',25JR,'<br />'),'') , if(25LMR>0,concat('25# LM R   -----   ',25LMR,'<br />'),'')) as Carga, "
+                    + "s.Lbs, s.SSaxDi, s.SSaxGreen, s.SSaxPurple, s.SSaxBlue, s.SSaxCF, s.Kg, s.Rp, s.Fc, s.Ox, s.50SCY, s.50CY, s.50JY, s.50LMY, s.20SMY, s.25JY, s.25LMY, s.25SMY, s.40CJY, s.50CW, s.50JW, s.50LMW, s.50SMW, s.25CW, s.25JW, s.25LMW, s.50CR, s.50JR, s.50LMR, s.50SMR, s.50PPR, s.25CR, s.25JR, s.25LMR, "
+                    + "coalesce(sh.ArrivalDate,'') as ArrivalDate "
+                    + "FROM shippinghistory sh "
+                    + "LEFT JOIN shipping s ON s.idShipping = sh.idShipping "
+                    + "WHERE sh.idShippingHistory > 0 ";
+
+            if (this.GetNodeArray().existValue("proforma")) {
+                proforma = GetNodeArray().find("proforma").getStringValue();
+                resultArray.add("SelectedProforma", proforma);
+                qry += " and s.proforma  = '" + proforma + "' ";
+            }
+            if (this.GetNodeArray().existValue("trucking")) {
+                trucking = GetNodeArray().find("trucking").getStringValue();
+                resultArray.add("SelectedTrucking", trucking);
+                qry += " and s.Trucking  = '" + trucking + "' ";
+            }
+            if (this.GetNodeArray().existValue("status")) {
+                status = GetNodeArray().find("status").getStringValue();
+                resultArray.add("SelectedStatus", status);
+                qry += " and sh.Status like '%" + status + "%' ";
+            }
+            if (this.GetNodeArray().existValue("startDate") && this.GetNodeArray().existValue("endDate")) {
+                startDate = GetNodeArray().find("startDate").getStringValue();
+                endDate = GetNodeArray().find("endDate").getStringValue();
+                resultArray.add("SelectedStartDate", startDate);
+                resultArray.add("SelectedEndDate", endDate);
+                qry += " and sh.ReceiptDate between STR_TO_DATE('" + startDate + "','%d/%m/%Y') "
+                        + "and STR_TO_DATE('" + endDate + "','%d/%m/%Y') ";
+            }            
+
+            qry += "Order by sh.idShippingHistory desc";
+
+            rset = pstmtRetrieveReport.executeQuery(qry);
+            xmlTable reportTable = this.formatDataTable(rset);
+            resultArray.add("ShippingHistoryReport_Table", reportTable);
+
+            if (pstmtRetrieveReport != null) {
+                pstmtRetrieveReport.close();
+                pstmtRetrieveReport = null;
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            resultArray.add("RESPONSE_CODE", "PASS");
+            resultArray.add("RESPONSE_MESSAGE", message);
+            resultArray.add("RESPONSE_DETAIL", "");
+
+            return resultArray;
+        } catch (SQLException e) {
+            System.out.println("RetrieveShippingHistoryReportTransaction::Execute> SQLException: " + e.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "SQLException");
+            resultArray.add("RESPONSE_DETAIL", e.getMessage());
+            return resultArray;
+        } catch (Exception ex) {
+            System.out.println("RetrieveShippingHistoryReportTransaction::Execute> Exception: " + ex.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "Exception");
+            resultArray.add("RESPONSE_DETAIL", ex.getMessage());
+            return resultArray;
+        } finally {
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+            if (rset2 != null) {
+                rset2.close();
+                rset2 = null;
+            }
+            CloseStatements();
+
+        }
+    }
+
+    /**
+     * Generates an xmlNodeArray containing parameters for this transaction
+     *
+     * @return xmlNodeArray that contains parameters for the transaction
+     * @exception (none)
+     */
+    @Override
+    public xmlNodeArray GenerateTestParameters() {
+        xmlNodeArray nodeArr = new xmlNodeArray();
+        nodeArr.add("TRANSACTION_CLASS_TO_EXECUTE", "AgrocosaTransactions.RetrieveShippingHistoryReportTransaction");
+        nodeArr.add("idTask", "36");
+        return nodeArr;
+    }
+
+    /**
+     * The main method for the transaction. Creates a database connection and an
+     * error Array, then executes the transaction and reports any errors
+     *
+     * @param argv argv[0] is an optional configuration file name
+     * @exception (none)
+     */
+    public static void main(String[] argv) {
+        try {
+            RetrieveShippingHistoryReportTransaction transaction = new RetrieveShippingHistoryReportTransaction();
+            SIDWebTransaction resultTransaction = null;
+            xmlNodeArray inputParameterArray = null;
+            //CIMDataBase database = null;
+            System.out.println("Usage: java -classpath ...AgrocosaTransactions.RetrieveShippingHistoryReportTransaction");
+
+            //<Add Database connection parameter for testing>
+            database = new SIDDataBase("jdbc:mysql://localhost:3306/agrocosa", "root", "entrar123");
+
+            transaction.SetSIDDataBase(database);
+            inputParameterArray = transaction.GenerateTestParameters();
+            if (!transaction.IsValidTransaction()) {
+                System.out.println(" RetrieveShippingHistoryReportTransaction contains an invalid transaction type.");
+            } else {
+                if (!transaction.Supports(inputParameterArray)) {
+                    System.out.println(" RetrieveShippingHistoryReportTransaction does not support this list of parameters.");
+                } else {
+                    resultTransaction = database.ExecuteTransaction("AgrocosaTransactions.RetrieveShippingHistoryReportTransaction", inputParameterArray);
+                    if (resultTransaction == null) {
+                        System.out.println("The transaction's result array is null.");
+                    } else {
+                        if (resultTransaction.GetError() != null) {
+                            resultTransaction.GetError().print();
+                        } else {
+                            if (resultTransaction.GetResultArray() == null) {
+                                System.out.println("RetrieveShippingHistoryReportTransaction - No results were returned.");
+                            } else {
+                                xmlNodeArray array = resultTransaction.GetResultArray();
+                                String str = xmlNodeArray.xmlNodeArray2String(array);
+                                array = xmlNodeArray.string2xmlNodeArray(str);
+                                System.out.println(str);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("RetrieveShippingHistoryReportTransaction::main> caught exception " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}

@@ -1,0 +1,156 @@
+package Agrocosa;
+
+import SIDWebEngine.*;
+import xmlNodeArray.xmlNodeArray;
+import java.io.File;
+import java.io.FileInputStream;
+import java.sql.*;
+import java.io.IOException;
+import java.io.InputStream;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+public class ShowPestPictureByIdServlet extends SIDServlet {
+
+    // Servlet configuration variables
+    /**
+     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
+     * methods.
+     *
+     * @param request servlet request
+     * @param response servlet response
+     * @param nodeArray
+     */
+    @Override
+    protected void processRequest(HttpServletRequest request,
+            HttpServletResponse response,
+            xmlNodeArray nodeArray) {
+        Connection con = null;
+        ResultSet rs = null;
+        boolean empty = false;
+        HttpSession session = null;
+
+        try {
+            session = request.getSession();
+
+            SIDDataBase database = new SIDDataBase();
+            ServletOutputStream out = response.getOutputStream();
+
+            if (nodeArray != null) {
+                if (nodeArray.getSize() > 0
+                        && nodeArray.exist("idPest")
+                        && !nodeArray.find("idPest").isValueEmpty()) {
+                    String idPest = nodeArray.find("idPest").getStringValue();
+
+                    con = database.GetConnection();
+                    con.setAutoCommit(false);
+
+                    String query = "Select Picture From pest Where idPest = " + idPest + " ";
+                    rs = con.createStatement().executeQuery(query);
+                    if (rs.next()) {
+                        byte[] bytearray = new byte[4096];
+                        int size = 0;
+                        InputStream image;
+                        image = rs.getBinaryStream(1);
+                        if (image != null) {
+                            response.reset();
+                            response.setContentType("image/gif");
+                            while ((size = image.read(bytearray)) != -1) {
+                                response.getOutputStream().write(bytearray, 0, size);
+                            }
+                            response.flushBuffer();
+                            image.close();
+                        } else {
+                            empty = true;
+                        }
+                    }
+                    if (rs != null) {
+                        rs.close();
+                        rs = null;
+                    }
+
+                    if (empty) {
+                        ServletContext sc = getServletContext();
+                        String filename = sc.getRealPath("/images/pest.png");
+                        String mimeType = sc.getMimeType(filename);
+                        if (mimeType == null) {
+                            sc.log("Could not get MIME type of " + filename);
+                            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                            return;
+                        }
+                        response.reset();
+                        response.setContentType(mimeType);
+                        File file = new File(filename);
+                        response.setContentLength((int) file.length());
+                        FileInputStream in = new FileInputStream(file);
+                        byte[] buf = new byte[1024];
+                        int count = 0;
+                        while ((count = in.read(buf)) >= 0) {
+                            out.write(buf, 0, count);
+                        }
+                        response.flushBuffer();
+                        in.close();
+                        out.close();
+                    }
+
+                } else {
+                    ServletContext sc = getServletContext();
+                    String filename = sc.getRealPath("/images/pest.png");
+                    String mimeType = sc.getMimeType(filename);
+                    if (mimeType == null) {
+                        sc.log("Could not get MIME type of " + filename);
+                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                        return;
+                    }
+                    response.reset();
+                    response.setContentType(mimeType);
+                    File file = new File(filename);
+                    response.setContentLength((int) file.length());
+                    FileInputStream in = new FileInputStream(file);
+                    byte[] buf = new byte[1024];
+                    int count = 0;
+                    while ((count = in.read(buf)) >= 0) {
+                        out.write(buf, 0, count);
+                    }
+                    response.flushBuffer();
+                    in.close();
+                    out.close();
+                }
+            }
+
+        } catch (SQLException sqle) {
+            request.setAttribute("RESPONSE_CODE", "FAIL");
+            request.setAttribute("RESPONSE_MESSAGE", "SQL_EXCEPTION_ERROR" + this.getClass().getName());
+            request.setAttribute("RESPONSE_DETAIL", sqle.getMessage());
+        } catch (IOException ioe) {
+            try {
+                con.rollback();
+            } catch (SQLException sqle) {
+                request.setAttribute("RESPONSE_CODE", "FAIL");
+                request.setAttribute("RESPONSE_MESSAGE", "SQL_EXCEPTION_ERROR" + this.getClass().getName());
+                request.setAttribute("RESPONSE_DETAIL", sqle.getMessage());
+            }
+            request.setAttribute("RESPONSE_CODE", "FAIL");
+            request.setAttribute("RESPONSE_MESSAGE", "IO_EXCEPTION_ERROR" + ". " + "<" + this.getClass().getName());
+            request.setAttribute("RESPONSE_DETAIL", ioe.getMessage());
+        } finally {
+            try {
+                if (rs != null) {
+                    rs.close();
+                    rs = null;
+                }
+                if (con != null && !con.isClosed()) {
+                    con.close();
+                    con = null;
+                }
+            } catch (SQLException sqle) {
+                request.setAttribute("RESPONSE_CODE", "FAIL");
+                request.setAttribute("RESPONSE_MESSAGE", "SQL_EXCEPTION_ERROR" + this.getClass().getName());
+                request.setAttribute("RESPONSE_DETAIL", sqle.getMessage());
+            }
+        }
+    }
+}

@@ -1,0 +1,297 @@
+<%@ taglib uri="http://displaytag.sf.net" prefix="display"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
+
+<script src="../plugins/select2/select2.js" type="text/javascript"></script>
+<link href="../plugins/select2/select2.css" rel="stylesheet" type="text/css" />
+
+<style>
+    .select2{
+        width:100%!important;
+    }
+</style>
+<!-- Content Wrapper. Contains page content -->
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <section class="content-header">
+        <h1>
+            Reporte de Campos
+            <small>Consulta de campos</small>
+        </h1>
+        <ol class="breadcrumb">
+            <li><a href="#"><i class="fa fa-caret-right"></i> Reportes</a></li>
+            <li class="active">Aqui</li>
+        </ol>
+    </section>
+
+    <!-- Main content -->
+    <section class="content">
+
+        <c:choose>
+            <c:when test="${requestScope.RESPONSE_CODE == 'PASS'}">                    
+                <c:if test="${requestScope.RESPONSE_MESSAGE ne 'OK'}">
+
+
+                    <div class="alert alert-success alert-dismissable">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                        <h4>	<i class="icon fa fa-check"></i> OK</h4>
+                        <c:out value="${requestScope.RESPONSE_MESSAGE}" /><br />
+                        <c:out value="${requestScope.RESPONSE_DETAIL}" />
+                    </div>
+                </c:if>
+            </c:when>
+            <c:when test="${requestScope.RESPONSE_CODE == 'FAIL'}">
+                <div class="alert alert-danger alert-dismissable">
+                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                    <h4><i class="icon fa fa-ban"></i> Error !</h4>
+                    <c:out value="${requestScope.RESPONSE_MESSAGE}" /><br />
+                    <c:out value="${requestScope.RESPONSE_DETAIL}" />
+                </div>
+
+            </c:when>
+        </c:choose>
+
+
+        <!-- Search Meeting -->
+        <form name="formsearch" role="form" action="campReport.do" method="post">
+            <div class="box box-success">
+                <div class="box-header with-border">
+                    <h3 class="box-title">Filtros de Busqueda</h3>
+                </div><!-- /.box-header -->
+                <div class="box-body">
+
+
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label >Campo</label>
+                            <select name="campName" id="campName" class="form-control select2">
+                                <option value=""></option>
+                                <c:forEach items="${Camp_HashMap}" var="item">
+                                    <option value="${item.value}"  ${requestScope.SelectedCampName == item.value  ? 'selected' : ''}>${item.value}</option>
+                                </c:forEach>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label >Seccion</label>
+                            <select name="sectionName" id="sectionName" class="form-control">                                
+                                <c:if test="${requestScope.SelectedCampName ne ''}"> 
+                                    <option value=""></option>
+                                    <c:forEach items="${CampSection_HashMap}" var="item">
+                                        <option value="${item.value}"  ${requestScope.SelectedSectionName == item.value  ? 'selected' : ''}>${item.value}</option>
+                                    </c:forEach>
+                                </c:if>
+                            </select>                                                
+                        </div>
+                        <div class="form-group">
+                            <label >Supervisor</label>
+                            <select name="supervisorName" id="supervisorName" class="form-control select2">
+                                <option value=""></option>
+                                <c:forEach items="${Supervisor_HashMap}" var="item">
+                                    <option value="${item.value}"  ${requestScope.SelectedSupervisor == item.value  ? 'selected' : ''}>${item.value}</option>
+                                </c:forEach>
+                            </select>                                                
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label >Bomba Primaria</label>
+                            <select name="bombPrimary" id="bombPrimary" class="form-control">
+                                <option value=""></option>
+                                <c:forEach items="${Bomb_HashMap}" var="item">
+                                    <option value="${item.value}"  ${requestScope.SelectedBombPrimary == item.value  ? 'selected' : ''}>${item.value}</option>
+                                </c:forEach>
+                            </select>                                                
+                        </div>                        
+                        <div class="form-group">
+                            <label >Bomba Secundaria</label>
+                            <select name="bombSecondary" id="bombSecondary" class="form-control">
+                                <option value=""></option>
+                                <c:forEach items="${Bomb_HashMap}" var="item">
+                                    <option value="${item.value}"  ${requestScope.SelectedBombSecondary == item.value  ? 'selected' : ''}>${item.value}</option>
+                                </c:forEach>
+                            </select>                                              
+                        </div>                        
+                        <div class="form-group">
+                            <label >Tipo de Suelo</label>
+                            <select name="landTypeName" id="landTypeName" class="form-control">
+                                <option value=""></option>
+                                <c:forEach items="${LandType_HashMap}" var="item">
+                                    <option value="${item.value}"  ${requestScope.SelectedLandTypeName == item.value  ? 'selected' : ''}>${item.value}</option>
+                                </c:forEach>
+                            </select>                                              
+                        </div>                        
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>Tipo de Cinta</label>
+                            <select name="pipeTypeName" id="pipeTypeName" class="form-control">
+                                <option value=""></option>
+                                <c:forEach items="${PipeType_HashMap}" var="item">
+                                    <option value="${item.value}"  ${requestScope.SelectedPipeTypeName == item.value  ? 'selected' : ''}>${item.value}</option>
+                                </c:forEach>
+                            </select> 
+                        </div>
+                        <div class="form-group">
+                            <label>Cultivo</label>
+                            <select name="cropTypeName" id="cropTypeName" class="form-control">
+                                <option value=""></option>
+                                <c:forEach items="${CropType_HashMap}" var="item">
+                                    <option value="${item.value}"  ${requestScope.SelectedCropTypeName == item.value  ? 'selected' : ''}>${item.value}</option>
+                                </c:forEach>
+                            </select>                              
+                        </div>                                                            
+                        <div class="form-group">
+                            <label>Variedad</label>
+                            <select name="cropName" id="cropName" class="form-control" data-title="Variedad">                                    
+                            </select>                              
+                        </div>                                                            
+                    </div>
+
+
+
+                </div><!-- /.box-body -->
+                <div class="box-footer">
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-search"></i> Buscar</button>
+                    <input type="hidden" name="Action" value="Search"/>    
+                </div>
+            </div><!-- /.box -->
+        </form>        
+
+        <div class="box box-success">
+            <div class="box-header with-border">
+                <h3 class="box-title">Campos</h3>
+                <div class="box-tools pull-right">
+                    <button class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                </div>
+            </div><!-- /.box-header -->
+            <div class="box-body">
+                <div class="table-responsive">
+                    <table id="dtable" class="table table-bordered table-striped table-hover">
+                        <thead>
+                            <tr>    
+                                <th>Nombre</th>
+                                <th>Seccion</th>
+                                <th>Cultivo</th>
+                                <th>Variedad</th>
+                                <th>Tipo de Suelo</th>
+                                <th>Tipo de Cinta</th>                                
+                                <th>Num. Secciones</th>
+                                <th>Area</th>
+                                <th>Supervisor</th>
+                                <th>Bomba Primaria</th>
+                                <th>Bomba Secundaria</th>
+
+                            </tr>
+                        </thead>                        
+                        <tbody>
+                            <c:set var="totalArea" value="${0}"/>
+                            <c:forEach items="${CampReport_Table}" var="row" varStatus="status">
+                                <tr>                                 
+                                    <td>${row.CampName}</td>
+                                    <td>${row.SectionName}</td>
+                                    <td>${row.CropTypeName}</td>
+                                    <td>${row.CropName}</td>
+                                    <td>${row.LandTypeName}</td>
+                                    <td>${row.PipeTypeName}</td>
+                                    <td>${row.SectionQty}</td>
+                                    <td>${row.Area}</td>
+                                    <c:set var="totalArea" value="${totalArea + row.Area}" />
+                                    <td>${row.Supervisor}</td>
+                                    <td>${row.PrimaryBomb}</td>
+                                    <td>${row.SecondaryBomb}</td>                                    
+                                </tr>
+                            </c:forEach>
+                        </tbody>
+                        <tfoot>
+                            <tr>                                 
+                                <th colspan="7" style="text-align: right;">Total Area</th>
+                                <th>${totalArea}</th>
+                            </tr>
+                        </tfoot>
+                    </table> 
+                </div>
+
+            </div><!-- /.box-body -->
+        </div>
+
+
+        <script>
+            $(document).ready(function () {
+                $("#campName").select2();
+                $("#supervisorName").select2();
+
+                $('#dtable').DataTable({
+                    "paging": false,
+                    "lengthChange": false,
+                    "searching": true,
+                    "ordering": false,
+                    "info": false,
+                    "autoWidth": false,
+                    "dom": 'T<"clear">lfrtip',
+                    "tableTools": {
+                        "sSwfPath": "../plugins/datatables/extensions/TableTools/swf/copy_csv_xls_pdf.swf"
+                    }
+                });
+
+                $("#campName").change(function () {
+                    if ($("#campName").val().length > 0) {
+                        var v = $("#campName").val();
+                        var param = 'campName=' + v;
+                        $.ajax({
+                            url: 'ajaxCampSection.do',
+                            type: 'POST',
+                            data: param,
+                            success: function (result) {
+                                $('#sectionName').children().remove();
+                                $("#sectionName").append(result);
+                            }
+                        });
+                    } else {
+                        $('#sectionName').children().remove();
+                    }
+                });
+
+
+                $("#cropTypeName").change(function () {
+
+                    if ($("#cropTypeName").val().length > 0) {
+
+                        var type = $("#cropTypeName").val();
+                        var param = 'CropType=' + type;
+
+                        $.ajax({
+                            url: 'ajaxCropByCropType.do',
+                            type: 'POST',
+                            data: param,
+                            success: function (result) {
+                                $('#cropName').children().remove();
+                                $("#cropName").append(result);
+                            }
+                        });
+
+                    }
+                });
+
+            });
+        </script>
+
+
+
+
+    </section><!-- /.content -->
+</div><!-- /.content-wrapper -->
+
+<c:if test="false">
+    <c:forEach items='${requestScope}' var='p'>
+        <ul>
+            <%-- Display the key of the current item, which
+                 represents the parameter name --%>
+            <li>Parameter Name: <c:out value='${p.key}'/></li>
+
+            <%-- Display the value of the current item, which
+                 represents the parameter value --%>
+            <li>Parameter Value: <c:out value='${p.value}'/></li>
+        </ul>
+    </c:forEach>
+</c:if>

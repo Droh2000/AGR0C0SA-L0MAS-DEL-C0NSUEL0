@@ -1,0 +1,353 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package AgrocosaTransactions;
+
+import SIDWebEngine.*;
+import java.sql.*;
+import xmlNodeArray.*;
+
+public class SaveBomTransaction extends SIDWebTransaction {
+
+    protected PreparedStatement pstmtDeleteBOM;
+    protected PreparedStatement pstmtInsertBOM;
+    protected PreparedStatement pstmtCountBOM;
+
+    /**
+     * Default Constructor
+     *
+     * @exception (none)
+     */
+    public SaveBomTransaction() {
+        super();
+        SetTransactionType(SIDWebTransaction.SaveType);
+    }
+
+    /**
+     * Checks to see if the node Array is supported
+     *
+     * @param nodeArray
+     * @return <B>true</B> if the nodeArray is supported. <B>false</B> otherwise
+     * @exception (none)
+     */
+    @Override
+    public boolean Supports(xmlNodeArray nodeArray) {
+
+        //Add tag names as comma separated Strings to the mandatoryTags array
+        String[] mandatoryTags = {
+            "idUser",
+            "idBom",
+            "dataTable4Save"
+        };
+
+        //Add tag names as comma separated Strings to the optionalTags array
+        String[] optionalTags = {};
+        //Add tag names as comma separated Strings to the mandatorySets array
+        String[] mandatorySets = {};
+        //Add tag names as comma separated Strings to the optionalSetTags array
+        String[] optionalSets = {};
+
+        xmlNodeArray errArray = new xmlNodeArray();
+        for (int i = 0; i < mandatoryTags.length; i++) {
+            if (!nodeArray.existValue(mandatoryTags[i])) {
+                System.out.println("<SaveBomTransaction::Supports> " + mandatoryTags[i] + " Mandatory tag not found or value is empty/null");
+                errArray.add("ERROR", "MANDATORY_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalTags.length; i++) {
+            if (nodeArray.exist(optionalTags[i]) && !nodeArray.existValue(optionalTags[i])) {
+                System.out.println("<SaveBomTransaction::Supports> " + optionalTags[i] + " Optional tag not found or value is empty/null");
+                errArray.add("OPTIONAL_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < mandatorySets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) == null || nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0) {
+                System.out.println("<SaveBomTransaction::Supports> " + mandatorySets[i] + " Mandatory Set not found or value is empty/null");
+                errArray.add("MANDATORY_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalSets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) != null && (nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0)) {
+                System.out.println("<SaveBomTransaction::Supports> " + optionalSets[i] + " Optional Set not found or value is empty/null");
+                errArray.add("OPTIONAL_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prepares the SQL statements to be executed
+     *
+     * @return <B>true</B> for successful preparation; <B>false</B> for
+     * unsuccessful preparation
+     * @exception (none)
+     */
+    @Override
+    public synchronized boolean PrepareStatements() {
+        //Note1 : Use PreparedStatements instead of Statements where ever possible
+        //Note2 : If transaction contains no prepared statements, delete entire function
+        //        Unless there are nested transaction, then Prepare will call those.
+        try {
+            Connection con = this.GetSIDDataBase().GetConnection();
+
+            pstmtDeleteBOM = con.prepareStatement("delete  "
+                    + "from bomdetail "
+                    + "Where idBom = ? ");
+
+            pstmtInsertBOM = con.prepareStatement("insert into bomdetail ( "
+                    + "idBom, "
+                    + "RawMaterialName, "
+                    + "Quantity, "
+                    + "UOM, "
+                    + "idUser, "
+                    + "InsertDate, "
+                    + "ModifiedDate, "
+                    + "Active "
+                    + ") values ( "
+                    + "?, "//1 idBom
+                    + "?, "//2 RawMaterialName
+                    + "?, "//3 Quantity
+                    + "?, "//4 UOM
+                    + "?, "//5 User
+                    + "Now(), "// InsertDate
+                    + "Now(), "// ModifiedDate
+                    + "1 "//Active
+                    + ")");
+
+            pstmtCountBOM = con.prepareStatement("SELECT "
+                    + "count(*) as Qty "
+                    + "FROM bomdetail "
+                    + "where idBom = ? ");
+
+            this.addPreparedStatement(pstmtInsertBOM);
+            this.addPreparedStatement(pstmtDeleteBOM);
+            this.addPreparedStatement(pstmtCountBOM);
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("SaveBomTransaction::PrepareStatements> SQLException: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * executes sql statements using input arguments and returns result
+     *
+     * @return valid node array if successful else null
+     * @exception SQLException if sql error occurs
+     * @exception Exception if non sql error occurs
+     */
+    @Override
+    public synchronized xmlNodeArray Execute() throws SQLException, Exception {
+        Connection conn = null;
+        xmlNodeArray resultArray = null;
+        ResultSet rset = null;
+        int rowsAffected = 0;
+        int idUser = 0;
+        int idBom = 0;
+        String dataTable4Save = "";
+        String rawMaterialName = "";
+        double quantity = 0;
+        String uom = "";
+        String result = "";
+        int counter = 0;
+
+        try {
+            conn = this.GetSIDDataBase().GetConnection();
+            conn.setAutoCommit(false);
+            resultArray = new xmlNodeArray();
+
+            idUser = GetNodeArray().find("idUser").getIntValue();
+            idBom = GetNodeArray().find("idBom").getIntValue();
+            dataTable4Save = GetNodeArray().find("dataTable4Save").getStringValue();
+
+            resultArray.add("idBom", idBom);
+
+            if (GetNodeArray().exist("bomName")) {
+                resultArray.add("bomName", GetNodeArray().find("bomName").getStringValue());
+            }
+
+            pstmtCountBOM.setInt(1, idBom);
+            rset = pstmtCountBOM.executeQuery();
+            if (rset.next()) {
+                counter = rset.getInt("Qty");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            //replace
+            if (counter > 0) {
+                //already exist
+                dataTable4Save = dataTable4Save.replace("[{", "");
+                dataTable4Save = dataTable4Save.replace("},[", "|");
+                dataTable4Save = dataTable4Save.replace("\"", "");
+                dataTable4Save = dataTable4Save.replace("]]", "");
+
+                dataTable4Save = dataTable4Save.replace("0:", "");
+                dataTable4Save = dataTable4Save.replace("1:", "");
+                dataTable4Save = dataTable4Save.replace("2:", "");
+                dataTable4Save = dataTable4Save.replace("3:", "");
+                dataTable4Save = dataTable4Save.replace("4:", "");
+
+            } else {
+                //all new
+                dataTable4Save = dataTable4Save.replace("[[", "");
+                dataTable4Save = dataTable4Save.replace("]]", "");
+                dataTable4Save = dataTable4Save.replace("\"", "");
+                dataTable4Save = dataTable4Save.replace("],[", "|");
+            }
+
+            String[] rowsData = dataTable4Save.split("\\|");
+
+            //delete
+            pstmtDeleteBOM.setInt(1, idBom);
+            pstmtDeleteBOM.executeUpdate();
+
+            //Insert detail
+            for (String rowsData1 : rowsData) {
+                String[] fieldData = rowsData1.split(",");
+                rawMaterialName = fieldData[0]; //rawmaterialname
+                quantity = Double.parseDouble(fieldData[1]); //quantity
+                uom = fieldData[2]; //uom
+
+                //insert
+                pstmtInsertBOM.setInt(1, idBom);
+                pstmtInsertBOM.setString(2, rawMaterialName);
+                pstmtInsertBOM.setDouble(3, quantity);
+                pstmtInsertBOM.setString(4, uom);
+                pstmtInsertBOM.setInt(5, idUser);
+                rowsAffected = pstmtInsertBOM.executeUpdate();
+                if (rowsAffected > 0) {
+                    result += "1";
+                } else {
+                    result += "0";
+                }
+            }
+
+            if (!result.contains("0")) {
+                conn.commit();
+                resultArray.add("Result", "El insumo compuesto han sido registrado exitosamente.");
+                resultArray.add("RESPONSE_CODE", "PASS");
+                resultArray.add("RESPONSE_MESSAGE", "El insumo compuesto han sido registrado exitosamente.");
+                resultArray.add("RESPONSE_DETAIL", "");
+            } else {
+                conn.rollback();
+                resultArray.add("Result", "El isumo compuesto no pudo ser registrado.");
+                resultArray.add("RESPONSE_CODE", "FAIL");
+                resultArray.add("RESPONSE_MESSAGE", "El isumo compuesto no pudo ser registrado.");
+                resultArray.add("RESPONSE_DETAIL", "");
+            }
+
+            return resultArray;
+
+        } catch (SQLException e) {
+            conn.rollback();
+            System.out.println("SaveBomTransaction::Execute> SQLException: " + e.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "SQLException:" + e.getMessage());
+            resultArray.add("RESPONSE_DETAIL", e.getMessage());
+            return resultArray;
+        } catch (Exception ex) {
+            conn.rollback();
+            System.out.println("SaveBomTransaction::Execute> Exception: " + ex.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "Exception:" + ex.getMessage());
+            resultArray.add("RESPONSE_DETAIL", ex.getMessage());
+            return resultArray;
+        } finally {
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+            CloseStatements();
+        }
+    }
+
+    /**
+     * Generates an xmlNodeArray containing parameters for this transaction
+     *
+     * @return xmlNodeArray that contains parameters for the transaction
+     * @exception (none)
+     */
+    @Override
+    public xmlNodeArray GenerateTestParameters() {
+        xmlNodeArray nodeArr = new xmlNodeArray();
+        nodeArr.add("TRANSACTION_CLASS_TO_EXECUTE", "JonesPlasticTransactions.SaveBomTransaction");
+        nodeArr.add("idUser", "1");
+        nodeArr.add("customer", "BRP");
+        nodeArr.add("comments", "Embarcar antes del medio dia");
+        nodeArr.add("dataTable4Save", "[[\"BRP\",\"707900700\",\"1\",\"x\"],[\"BRP\",\"707900702\",\"2\",\"x\"],[\"BRP\",\"707900704\",\"3\",\"x\"],[\"BRP\",\"707900705\",\"4\",\"x\"]]");
+
+        return nodeArr;
+
+    }
+
+    /**
+     * The main method for the transaction. Creates a database connection and an
+     * error Array, then executes the transaction and reports any errors
+     *
+     * @param argv argv[0] is an optional configuration file name
+     * @exception (none)
+     */
+    public static void main(String[] argv) {
+        try {
+            SaveBomTransaction transaction = new SaveBomTransaction();
+            SIDWebTransaction resultTransaction = null;
+            xmlNodeArray inputParameterArray = null;
+            //CIMDataBase database = null;
+            System.out.println("Usage: java -classpath ...JonesPlasticTransactions.SaveBomTransaction");
+
+            //<Add Database connection parameter for testing>
+            database = new SIDDataBase("jdbc:mysql://localhost:3306/agrocosa", "root", "entrar123");
+
+            transaction.SetSIDDataBase(database);
+            inputParameterArray = transaction.GenerateTestParameters();
+            if (!transaction.IsValidTransaction()) {
+                System.out.println(" SaveBomTransaction contains an invalid transaction type.");
+            } else {
+                if (!transaction.Supports(inputParameterArray)) {
+                    System.out.println(" SaveBomTransaction does not support this list of parameters.");
+                } else {
+                    resultTransaction = database.ExecuteTransaction("JonesPlasticTransactions.SaveBomTransaction", inputParameterArray);
+                    if (resultTransaction == null) {
+                        System.out.println("The transaction's result array is null.");
+                    } else {
+                        if (resultTransaction.GetError() != null) {
+                            resultTransaction.GetError().print();
+                        } else {
+                            if (resultTransaction.GetResultArray() == null) {
+                                System.out.println("SaveBomTransaction - No results were returned.");
+                            } else {
+                                xmlNodeArray array = resultTransaction.GetResultArray();
+                                String str = xmlNodeArray.xmlNodeArray2String(array);
+                                array = xmlNodeArray.string2xmlNodeArray(str);
+                                System.out.println(str);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("SaveBomTransaction::main> caught exception " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}

@@ -1,0 +1,334 @@
+package AgrocosaTransactions;
+
+import SIDWebEngine.*;
+import java.sql.*;
+import xmlNodeArray.*;
+
+/**
+ *
+ * @author Juan
+ */
+public class RetrieveAjaxInventoryByProductNameTransaction extends SIDWebTransaction {
+    static String CROSSDOCK = "Bodega";
+    protected PreparedStatement pstmtSelectProductName;
+    protected PreparedStatement pstmtSelectInventory;
+    protected PreparedStatement pstmtSelectPalletId;
+
+    /**
+     * Default Constructor
+     *
+     * @exception (none)
+     */
+    public RetrieveAjaxInventoryByProductNameTransaction() {
+        super();
+        SetTransactionType(SIDWebTransaction.RetrieveType);
+    }
+
+    /**
+     * Checks to see if the node Array is supported
+     *
+     * @param nodeArray
+     * @return <B>true</B> if the nodeArray is supported. <B>false</B> otherwise
+     * @exception (none)
+     */
+    @Override
+    public boolean Supports(xmlNodeArray nodeArray) {
+
+        //Add tag names as comma separated Strings to the mandatoryTags array
+        String[] mandatoryTags = {"idShippingOrderDetail"};
+        //Add tag names as comma separated Strings to the optionalTags array
+        String[] optionalTags = {};
+        //Add tag names as comma separated Strings to the mandatorySets array
+        String[] mandatorySets = {};
+        //Add tag names as comma separated Strings to the optionalSetTags array
+        String[] optionalSets = {};
+
+        xmlNodeArray errArray = new xmlNodeArray();
+        for (int i = 0; i < mandatoryTags.length; i++) {
+            if (!nodeArray.existValue(mandatoryTags[i])) {
+                System.out.println("<RetrieveAjaxInventoryByProductNameTransaction::Supports> " + mandatoryTags[i] + " Mandatory tag not found or value is empty/null");
+                errArray.add("ERROR", "MANDATORY_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalTags.length; i++) {
+            if (nodeArray.exist(optionalTags[i]) && !nodeArray.existValue(optionalTags[i])) {
+                System.out.println("<RetrieveAjaxInventoryByProductNameTransaction::Supports> " + optionalTags[i] + " Optional tag not found or value is empty/null");
+                errArray.add("OPTIONAL_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < mandatorySets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) == null || nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0) {
+                System.out.println("<RetrieveAjaxInventoryByProductNameTransaction::Supports> " + mandatorySets[i] + " Mandatory Set not found or value is empty/null");
+                errArray.add("MANDATORY_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalSets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) != null && (nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0)) {
+                System.out.println("<RetrieveAjaxInventoryByProductNameTransaction::Supports> " + optionalSets[i] + " Optional Set not found or value is empty/null");
+                errArray.add("OPTIONAL_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prepares the SQL statements to be executed
+     *
+     * @return <B>true</B> for successful preparation;
+     * <B>false</B> for unsuccessful preparation
+     * @exception (none)
+     */
+    @Override
+    public synchronized boolean PrepareStatements() {
+        //Note1 : Use PreparedStatements instead of Statements where ever possible
+        //Note2 : If transaction contains no prepared statements, delete entire function
+        //        Unless there are nested transaction, then Prepare will call those.
+        try {
+            Connection con = this.GetSIDDataBase().GetConnection();
+            pstmtSelectProductName = con.prepareStatement("SELECT "
+                    + "ProductName,"
+                    + "Quantity  "
+                    + "from shippingorderdetail "
+                    + "where idShippingOrderDetail = ?");
+            
+            pstmtSelectInventory = con.prepareStatement("SELECT "
+                    + "storage.StorageName, "
+                    + "substorage.SubstorageName, "
+                    + "palletproduct.ProductName, "
+                    + "palletproduct.Color, "
+                    + "palletproduct.Size, "
+                    + "sum(Quantity) as Qty "
+                    + "FROM inventory inner join "
+                    + "storage on storage.idStorage = inventory.idStorage inner join "
+                    + "substorage on substorage.idSubStorage = inventory.idSubstorage inner join "
+                    + "palletproduct on palletproduct.idPalletProduct = inventory.idPalletProduct "
+                    + "Where storage.StorageName = '"+ CROSSDOCK +"'  "
+                    + "and palletproduct.ProductName = ? "
+                    + "Group by storage.StorageName, "
+                    + "substorage.SubstorageName, "
+                    + "palletproduct.ProductName, "
+                    + "palletproduct.Color, "
+                    + "palletproduct.Size "
+                    + "Order by storage.StorageName, "
+                    + "substorage.SubstorageName");
+
+            pstmtSelectPalletId = con.prepareStatement("SELECT storage.StorageName, "
+                    + "substorage.SubstorageName, "
+                    + "inventory.PalletId "
+                    + "FROM inventory inner join "
+                    + "storage on storage.idStorage = inventory.idStorage inner join "
+                    + "substorage on substorage.idSubStorage = inventory.idSubstorage inner join "
+                    + "palletproduct on palletproduct.idPalletProduct = inventory.idPalletProduct "
+                    + "Where storage.StorageName = '" + CROSSDOCK + "'  "
+                    + "and palletproduct.ProductName = ? "
+                    + "Order by inventory.PalletId LIMIT ?");
+                    
+            this.addPreparedStatement(pstmtSelectProductName);
+            this.addPreparedStatement(pstmtSelectInventory);
+            this.addPreparedStatement(pstmtSelectPalletId);
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("RetrieveAjaxInventoryByProductNameTransaction::PrepareStatements> SQLException: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * executes sql statements using input arguments and returns result
+     *
+     * @return valid node array if successful else null
+     * @exception SQLException if sql error occurs
+     * @exception Exception if non sql error occurs
+     */
+    @Override
+    public synchronized xmlNodeArray Execute() throws SQLException, Exception {
+        xmlNodeArray resultArray = null;
+        ResultSet rset = null;
+        String message = "OK";
+        String result = "";
+        int idShippingOrderDetail = 0;
+        String productName = "";
+        int quantity = 0;
+
+        try {
+            resultArray = new xmlNodeArray();
+
+            idShippingOrderDetail = GetNodeArray().find("idShippingOrderDetail").getIntValue();
+            
+            pstmtSelectProductName.setInt(1, idShippingOrderDetail);
+            rset = pstmtSelectProductName.executeQuery();
+            if(rset.next()){
+                productName = rset.getString("ProductName");
+                quantity = rset.getInt("Quantity");
+            }
+            if(rset != null){
+                rset.close();
+                rset = null;
+            }
+                    
+            pstmtSelectInventory.setString(1, productName);
+            rset = pstmtSelectInventory.executeQuery();
+            result += "<table id=\"dtable2\" class=\"table table-bordered table-striped table-hover\">"
+                    + "<thead>"
+                    + "<tr>"
+                    + "<th>Localidad</th>"
+                    + "<th>Sublocalidad</th>"
+                    + "<th>Producto</th>"
+                    + "<th>Color</th>"
+                    + "<th>Tamaño</th>"
+                    + "<th>Cantidad</th>"
+                    + "</thead>"
+                    + "<tbody>";
+            
+            while (rset.next()) {
+                result += "<tr>"
+                        + "<td>" + rset.getString("StorageName") +"</td>"
+                        + "<td>" + rset.getString("SubstorageName") +"</td>"
+                        + "<td>" + rset.getString("ProductName") +"</td>"
+                        + "<td>" + rset.getString("Color") +"</td>"
+                        + "<td>" + rset.getString("Size") +"</td>"
+                        + "<td>" + rset.getString("Qty") +"</td>"
+                        + "</tr>";
+            }
+            result += "</tbody></table><br>";
+            //close
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            pstmtSelectPalletId.setString(1, productName);
+            pstmtSelectPalletId.setInt(2, quantity);
+            rset = pstmtSelectPalletId.executeQuery();
+            result += "<table id=\"dtable3\" class=\"table table-bordered table-striped table-hover\">"
+                    + "<thead>"
+                    + "<tr>"
+                    + "<th>Localidad</th>"
+                    + "<th>Sublocalidad</th>"
+                    + "<th>Pallet Id</th>"
+                    + "</thead>"
+                    + "<tbody>";
+            
+            while (rset.next()) {
+                result += "<tr>"
+                        + "<td>" + rset.getString("StorageName") +"</td>"
+                        + "<td>" + rset.getString("SubstorageName") +"</td>"
+                        + "<td>" + rset.getString("PalletId") +"</td>"
+                        + "</tr>";
+            }
+            result += "</tbody></table><br>";
+            //close
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            resultArray.add("Result", result);
+            resultArray.add("RESPONSE_CODE", "PASS");
+            resultArray.add("RESPONSE_MESSAGE", message);
+            resultArray.add("RESPONSE_DETAIL", "");
+
+            return resultArray;
+        } catch (SQLException e) {
+            System.out.println("RetrieveAjaxInventoryByProductNameTransaction::Execute> SQLException: " + e.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "SQLException");
+            resultArray.add("RESPONSE_DETAIL", e.getMessage());
+            return resultArray;
+        } catch (Exception ex) {
+            System.out.println("RetrieveAjaxInventoryByProductNameTransaction::Execute> Exception: " + ex.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "Exception");
+            resultArray.add("RESPONSE_DETAIL", ex.getMessage());
+            return resultArray;
+        } finally {
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+            CloseStatements();
+
+//            System.out.println("<RetrieveAjaxInventoryByProductNameTransaction::Execute> exit");
+        }
+    }
+
+    /**
+     * Generates an xmlNodeArray containing parameters for this transaction
+     *
+     * @return xmlNodeArray that contains parameters for the transaction
+     * @exception (none)
+     */
+    @Override
+    public xmlNodeArray GenerateTestParameters() {
+        xmlNodeArray nodeArr = new xmlNodeArray();
+        nodeArr.add("TRANSACTION_CLASS_TO_EXECUTE", "JonesPlasticTransactions.RetrieveAjaxInventoryByProductNameTransaction");
+        nodeArr.add("idShippingOrderDetail", "7");
+        return nodeArr;
+    }
+
+    /**
+     * The main method for the transaction. Creates a database connection and an
+     * error Array, then executes the transaction and reports any errors
+     *
+     * @param argv argv[0] is an optional configuration file name
+     * @exception (none)
+     */
+    public static void main(String[] argv) {
+        try {
+            RetrieveAjaxInventoryByProductNameTransaction transaction = new RetrieveAjaxInventoryByProductNameTransaction();
+            SIDWebTransaction resultTransaction = null;
+            xmlNodeArray inputParameterArray = null;
+            //CIMDataBase database = null;
+            System.out.println("Usage: java -classpath ...JonesPlasticTransactions.RetrieveAjaxInventoryByProductNameTransaction");
+
+            //<Add Database connection parameter for testing>
+            database = new SIDDataBase("jdbc:mysql://localhost:3306/agrocosa", "root", "entrar123");
+
+            transaction.SetSIDDataBase(database);
+            inputParameterArray = transaction.GenerateTestParameters();
+            if (!transaction.IsValidTransaction()) {
+                System.out.println(" RetrieveAjaxInventoryByProductNameTransaction contains an invalid transaction type.");
+            } else {
+                if (!transaction.Supports(inputParameterArray)) {
+                    System.out.println(" RetrieveAjaxInventoryByProductNameTransaction does not support this list of parameters.");
+                } else {
+                    resultTransaction = database.ExecuteTransaction("JonesPlasticTransactions.RetrieveAjaxInventoryByProductNameTransaction", inputParameterArray);
+                    if (resultTransaction == null) {
+                        System.out.println("The transaction's result array is null.");
+                    } else {
+                        if (resultTransaction.GetError() != null) {
+                            resultTransaction.GetError().print();
+                        } else {
+                            if (resultTransaction.GetResultArray() == null) {
+                                System.out.println("RetrieveAjaxInventoryByProductNameTransaction - No results were returned.");
+                            } else {
+                                xmlNodeArray array = resultTransaction.GetResultArray();
+                                String str = xmlNodeArray.xmlNodeArray2String(array);
+                                array = xmlNodeArray.string2xmlNodeArray(str);
+                                System.out.println(str);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("RetrieveAjaxInventoryByProductNameTransaction::main> caught exception " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}

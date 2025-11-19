@@ -1,0 +1,88 @@
+<%@ taglib uri="http://displaytag.sf.net" prefix="display"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://tiles.apache.org/tags-tiles" prefix="tiles"%>
+
+<header class="main-header">
+    <c:if test="${not empty sessionScope.idUser}">
+        <!-- Logo -->
+        <a href="main.do" class="logo">
+            <!-- mini logo for sidebar mini 50x50 pixels -->
+            <span class="logo-mini"><img style="padding-top: 10px;" class="img-responsive" src="../images/header.png" alt="logo"/></span>
+            <!-- logo for regular state and mobile devices -->
+            <span class="logo-lg"><img style="padding-top: 10px;" class="img-responsive" src="../images/header-text.png" alt="logo"/></span>
+        </a>
+        <!-- Header Navbar: style can be found in header.less -->
+        <nav class="navbar navbar-static-top" role="navigation">
+            <!-- Sidebar toggle button-->
+            <a href="#" class="sidebar-toggle" data-toggle="offcanvas" role="button">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </a>
+            <div class="navbar-custom-menu">
+                <ul class="nav navbar-nav">
+
+                    <c:choose>
+                        <c:when test="${sessionScope.NuevaQty ne null && sessionScope.NuevaQty > 0}">
+                            <li class="dropdown notifications-menu">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                    <i class="fa fa-check-square-o"></i>
+                                    <span class="label label-danger">${sessionScope.NuevaQty}</span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li class="header">${sessionScope.NuevaQty} Tareas por Atender</li>
+                                    <li class="footer"><a href="attendTask.do">Ver Todos</a></li>
+                                </ul>
+                            </li>
+                        </c:when>
+                    </c:choose>
+                    <c:choose>
+                        <c:when test="${sessionScope.EnProcesoQty ne null && sessionScope.EnProcesoQty > 0}">
+                            <li class="dropdown notifications-menu">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                    <i class="fa fa-close"></i>
+                                    <span class="label label-danger">${sessionScope.EnProcesoQty}</span>
+                                </a> 
+                                <ul class="dropdown-menu">
+                                    <li class="header">${sessionScope.EnProcesoQty} Tareas para Cerrar</li>
+                                    <li class="footer"><a href="closeTask.do">Ver Todos</a></li>
+                                </ul>
+                            </li>
+                        </c:when>
+                    </c:choose>                        
+
+
+                    <!-- User Account: style can be found in dropdown.less -->
+                    <li class="dropdown user user-menu">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            <img src="showUserPicture.do" class="user-image" alt="User Image">
+                            <span class="hidden-xs">${sessionScope.firstName}&nbsp;${sessionScope.lastName}</span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <!-- User image -->
+                            <li class="user-header">
+                                <img src="showUserPicture.do" class="img-circle" alt="User Image" />
+                                <p>
+                                    ${sessionScope.firstName}&nbsp;${sessionScope.lastName} - ${sessionScope.rol}
+                                    <small>${sessionScope.username}</small>
+                                </p>
+                            </li>
+
+                            <!-- Menu Footer-->
+                            <li class="user-footer">
+                                <div class="pull-left">
+                                    <a href="profile.do" class="btn btn-default btn-flat">Perfil</a>
+                                </div>
+                                <div class="pull-right">
+                                    <a href="${requestScope['javax.servlet.forward.context_path']}/public/logout" class="btn btn-default btn-flat">Salir</a>
+                                </div>
+                            </li>
+                        </ul>
+                    </li>
+
+                </ul>
+            </div>
+        </nav>
+    </c:if>
+</header>

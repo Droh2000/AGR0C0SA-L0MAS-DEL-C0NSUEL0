@@ -1,0 +1,410 @@
+<%@ taglib uri="http://displaytag.sf.net" prefix="display"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+
+
+
+<!-- Left side column. contains the logo and sidebar -->
+<aside class="main-sidebar">
+
+    <!-- sidebar: style can be found in sidebar.less -->
+    <section class="sidebar">
+
+        <!-- Sidebar user panel (optional) -->
+        <div class="user-panel">
+            <div class="pull-left image">
+                <img src="showUserPicture.do" class="img-circle" alt="User Image" />
+            </div>
+            <div class="pull-left info">
+                <p>${sessionScope.name}</p>
+                <!-- Status -->
+                <a href="${requestScope['javax.servlet.forward.context_path']}/public/logout"><i class="fa fa-circle text-success"></i> <span class="hidden-xs">${sessionScope.firstName}&nbsp;${sessionScope.lastName}</span></a>
+            </div>
+        </div>
+
+        <!-- Sidebar Menu -->
+        <ul class="sidebar-menu">
+            <li class="header"></li>   
+
+            <!-- HOME -->
+            <li class="treeview ${sessionScope.acordion == 'Inicio'  ? 'active' : ''}">
+                <a href="main.do"><i class='fa fa-home'></i> <span>Inicio</span></a>
+            </li>
+
+
+            <c:choose>
+                <c:when test="${sessionScope.rol eq 'Administrador'}">
+
+                    <li class="treeview ${sessionScope.acordion == 'Admin'  ? 'active' : ''}" >
+                        <a href="#"><i class='fa fa-gear'></i> <span>Configuración</span> <i class="fa fa-angle-left pull-right"></i></a>
+                        <ul class="treeview-menu">
+                            <li><a href="regionManagement.do">
+                                    <i class='${sessionScope.Controller == 'regionManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Regiones</a></li>
+                            <li><a href="campManagement.do">
+                                    <i class='${sessionScope.Controller == 'campManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Campos</a></li>
+                            <li><a href="cropTypeManagement.do">
+                                    <i class='${sessionScope.Controller == 'cropTypeManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Cultivos</a></li>
+                            <li><a href="cropManagement.do">
+                                    <i class='${sessionScope.Controller == 'cropManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Variedad</a></li>                                    
+                            <li><a href="laborTypeManagement.do">
+                                    <i class='${sessionScope.Controller == 'laborTypeManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Tipos de Labor</a></li>
+                            <li><a href="engineManagement.do">
+                                    <i class='${sessionScope.Controller == 'engineManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Motores</a></li>
+                            <li><a href="waterPumpManagement.do">
+                                    <i class='${sessionScope.Controller == 'waterPumpManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Bombas</a></li>
+                            <li><a href="bombManagement.do">
+                                    <i class='${sessionScope.Controller == 'bombManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Cuarto de Rebombeo</a></li>
+                            <li><a href="landTypeManagement.do">
+                                    <i class='${sessionScope.Controller == 'landTypeManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Tipos de Suelo</a></li>
+                            <li><a href="pipeTypeManagement.do">
+                                    <i class='${sessionScope.Controller == 'pipeTypeManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Tipos de Cinta</a></li>
+                            <li><a href="formulaManagement.do">
+                                    <i class='${sessionScope.Controller == 'formulaManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Formulas</a></li>
+                            <li><a href="irrigationTypeManagement.do">
+                                    <i class='${sessionScope.Controller == 'irrigationTypeManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Tipos de Riego</a></li>
+                            <li><a href="farmingManagement.do">
+                                    <i class='${sessionScope.Controller == 'farmingManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Labranza</a></li>
+                            <li><a href="agrochemicalManagement.do">
+                                    <i class='${sessionScope.Controller == 'agrochemicalManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Agroquimicos</a></li>
+                            <li><a href="tractorManagement.do">
+                                    <i class='${sessionScope.Controller == 'tractorManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Tractor</a></li>
+                            <li><a href="toolManagement.do">
+                                    <i class='${sessionScope.Controller == 'toolManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Herramientas</a></li>
+                            <li><a href="roleManagement.do">
+                                    <i class='${sessionScope.Controller == 'roleManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Grupos</a></li>
+                            <li><a href="userManagement.do">
+                                    <i class='${sessionScope.Controller == 'userManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Usuarios</a></li>
+                            <li><a href="configurationManagement.do">
+                                    <i class='${sessionScope.Controller == 'configurationManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Variables del Sistema</a></li>
+                            <li><a href="storageManagement.do">
+                                    <i class='${sessionScope.Controller == 'storageManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Localidades Inventario</a></li>
+                            <li><a href="substorageManagement.do">
+                                    <i class='${sessionScope.Controller == 'substorageManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Sublocalidades de Inventario</a></li>
+                            <li><a href="palletDefinitionManagement.do">
+                                    <i class='${sessionScope.Controller == 'palletDefinitionManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Pallets</a></li>
+                            <li><a href="palletProductManagement.do">
+                                    <i class='${sessionScope.Controller == 'palletProductManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Productos por Pallets</a></li>
+                            <li><a href="transportCompanyManagement.do">
+                                    <i class='${sessionScope.Controller == 'transportCompanyManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Transportista</a></li>
+                            <li><a href="customerManagement.do">
+                                    <i class='${sessionScope.Controller == 'customerManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Clientes</a></li>
+                            <li><a href="brandManagement.do">
+                                    <i class='${sessionScope.Controller == 'brandManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Marcas</a></li>
+                            <li><a href="categoryManagement.do">
+                                    <i class='${sessionScope.Controller == 'categoryManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Salidas Pallets</a></li>
+                            <li><a href="supplierManagement.do">
+                                    <i class='${sessionScope.Controller == 'supplierManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Proveedores</a></li>
+                            <li><a href="rawMaterialTypeManagement.do">
+                                    <i class='${sessionScope.Controller == 'rawMaterialTypeManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Tipo de Insumos</a></li>
+                            <li><a href="rawMaterialManagement.do">
+                                    <i class='${sessionScope.Controller == 'rawMaterialManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Insumos</a></li>
+                            <li><a href="bomManagement.do">
+                                    <i class='${sessionScope.Controller == 'bomManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Insumo Compuesto</a></li>
+                            <li><a href="uomConversionManagement.do">
+                                    <i class='${sessionScope.Controller == 'uomConversionManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Conversion unidad de medida</a></li>                                    
+                        </ul>
+
+                    </li>   
+
+                    <li class="treeview ${sessionScope.acordion == 'Camp'  ? 'active' : ''}">
+                        <a href="#"><i class='fa fa-flag-o'></i> <span>Campos</span> <i class="fa fa-angle-left pull-right"></i></a>
+                        <ul class="treeview-menu">
+                            <li><a href="campConfiguration.do">
+                                    <i class='${sessionScope.Controller == 'campConfiguration.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Configurar Campos</a></li>
+                        </ul>
+                    </li>                       
+
+                    <li class="treeview ${sessionScope.acordion == 'Task'  ? 'active' : ''}">
+                        <a href="#"><i class='fa fa-check-square-o'></i> <span>Tareas</span> <i class="fa fa-angle-left pull-right"></i></a>
+                        <ul class="treeview-menu">
+                            <li><a href="newFarmingTask.do">
+                                    <i class='${sessionScope.Controller == 'newFarmingTask.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    <span>Labranza</span> <small class="label pull-right bg-red">${sessionScope.NewFarmingQty}</small></a></li>
+                            <li><a href="newApplicationTask.do">
+                                    <i class='${sessionScope.Controller == 'newApplicationTask.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    <span>Aplicación Foliar</span> <small class="label pull-right bg-red">${sessionScope.NewApplicationQty}</small></a></li>
+                            <li><a href="newPickingTask.do">
+                                    <i class='${sessionScope.Controller == 'newPickingTask.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    <span>Cosecha</span> <small class="label pull-right bg-red">${sessionScope.NewPickingQty}</small></a></li>
+                            <li><a href="newJournalTask.do">
+                                    <i class='${sessionScope.Controller == 'newJournalTask.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    <span>Jornal</span> <small class="label pull-right bg-red">${sessionScope.NewJournalQty}</small></a></li>
+                            <li><a href="newIrrigationTask.do">
+                                    <i class='${sessionScope.Controller == 'newIrrigationTask.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    <span>Riego</span> <small class="label pull-right bg-red">${sessionScope.NewIrrigationQty}</small></a></li>
+                        </ul>
+                    </li>                       
+
+                    <li class="treeview ${sessionScope.acordion == 'Shipping'  ? 'active' : ''}">
+                        <a href="#"><i class='fa fa-truck'></i> <span>Empaque</span> <i class="fa fa-angle-left pull-right"></i></a>
+                        <ul class="treeview-menu">
+                            <li><a href="newPallet.do">
+                                    <i class='${sessionScope.Controller == 'newPallet.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Crear Pallet</a></li>
+                            <li><a href="newStockTransferOrder.do">
+                                    <i class='${sessionScope.Controller == 'newStockTransferOrder.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Palletizado</a></li>
+                            <li><a href="releaseStockTransferOrder.do">
+                                    <i class='${sessionScope.Controller == 'releaseStockTransferOrder.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Liberar Embarque</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="treeview ${sessionScope.acordion == 'Crossdock'  ? 'active' : ''}">
+                        <a href="#"><i class='fa fa-building-o'></i> <span>Bodega</span> <i class="fa fa-angle-left pull-right"></i></a>
+                        <ul class="treeview-menu">
+                            <li><a href="receiptStockTransferOrder.do">
+                                    <i class='${sessionScope.Controller == 'receiptStockTransferOrder.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Recibo de Embarque</a></li>
+                            <li><a href="newShippingOrder.do">
+                                    <i class='${sessionScope.Controller == 'newShippingOrder.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Orden de Embarque</a></li>
+                            <li><a href="scanShippingOrder.do">
+                                    <i class='${sessionScope.Controller == 'scanShippingOrder.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Escanear Pallets</a></li>
+                        </ul>
+                    </li>
+
+
+                    <li class="treeview ${sessionScope.acordion eq 'Pallets'  ? 'active' : ''}">
+                        <a href="#"><i class='fa fa-cubes'></i> <span>Pallets</span> <i class="fa fa-angle-left pull-right"></i></a>
+                        <ul class="treeview-menu">
+                            <li><a href="outPallets.do">
+                                    <i class='${sessionScope.Controller == 'outPallets.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Salida de Pallets</a></li>
+                            <li><a href="consolidatePallets.do">
+                                    <i class='${sessionScope.Controller == 'consolidatePallets.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Consolidar Pallets</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="treeview ${sessionScope.acordion eq 'Pests'  ? 'active' : ''}">
+                        <a href="#"><i class='fa fa-bug'></i> <span>Plagas</span> <i class="fa fa-angle-left pull-right"></i></a>
+                        <ul class="treeview-menu">
+                            <li><a href="pestsManagement.do">
+                                    <i class='${sessionScope.Controller == 'pestsManagement.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Plagas</a></li>
+                            <li><a href="pestsReport.do">
+                                    <i class='${sessionScope.Controller == 'pestsReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Buscar Plagas</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="treeview ${sessionScope.acordion eq 'Drying'  ? 'active' : ''}">
+                        <a href="#"><i class='fa fa-random'></i> <span>Secado</span> <i class="fa fa-angle-left pull-right"></i></a>
+                        <ul class="treeview-menu">
+                            <li><a href="receiptPicking.do">
+                                    <i class='${sessionScope.Controller == 'receiptPicking.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Recibo de Cosecha</a></li>
+                            <li><a href="outBinInventory.do">
+                                    <i class='${sessionScope.Controller == 'outBinInventory.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Salida de Bines</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="treeview ${sessionScope.acordion eq 'RawMaterial'  ? 'active' : ''}">
+                        <a href="#"><i class='fa fa-cart-plus'></i> <span>Insumos</span> <i class="fa fa-angle-left pull-right"></i></a>
+                        <ul class="treeview-menu">
+                            <li><a href="receiptRawMaterial.do">
+                                    <i class='${sessionScope.Controller == 'receiptRawMaterial.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Recibo de Insumos</a></li>
+                            <li><a href="consumeRawMaterial.do">
+                                    <i class='${sessionScope.Controller == 'consumeRawMaterial.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Salida de Insumos</a></li>
+                            <li><a href="consumeRawMaterialComposed.do">
+                                    <i class='${sessionScope.Controller == 'consumeRawMaterialComposed.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Salida de Insumos Compuestos</a></li>
+                        </ul>
+
+                    </li>
+
+
+                    <li class="treeview ${sessionScope.acordion == 'Report'  ? 'active' : ''}">
+                        <a href="#"><i class='fa fa-file-text-o'></i> <span>Reportes</span> <i class="fa fa-angle-left pull-right"></i></a>
+                        <ul class="treeview-menu">
+                            <li><a href="campReport.do">
+                                    <i class='${sessionScope.Controller == 'campReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Campos</a></li>
+                            <li><a href="taskReport.do">
+                                    <i class='${sessionScope.Controller == 'taskReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Tareas</a></li>                                    
+                            <li><a href="taskHistoryReport.do">
+                                    <i class='${sessionScope.Controller == 'taskHistoryReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Historial de Tareas</a></li>                                    
+                            <li><a href="taskFormulaReport.do">
+                                    <i class='${sessionScope.Controller == 'taskFormulaReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Formulas en Campos</a></li>                                    
+                            <li><a href="taskJournalReport.do">
+                                    <i class='${sessionScope.Controller == 'taskJournalReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Jornales en Campos</a></li>                                    
+                            <li><a href="inventoryReport.do">
+                                    <i class='${sessionScope.Controller == 'inventoryReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Inventario</a></li>                                    
+                            <li><a href="inventoryDetailReport.do">
+                                    <i class='${sessionScope.Controller == 'inventoryDetailReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Inventario x Pallet</a></li>                                    
+                            <li><a href="palletReport.do">
+                                    <i class='${sessionScope.Controller == 'palletReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Pallets</a></li>                                    
+                            <li><a href="stockTransferOrderReport.do">
+                                    <i class='${sessionScope.Controller == 'stockTransferOrderReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Embarques al Paso</a></li>                                    
+                            <li><a href="stockTransferOrderHistoryReport.do">
+                                    <i class='${sessionScope.Controller == 'stockTransferOrderHistoryReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Historial Embarques al Paso</a></li>                                    
+                            <li><a href="shippingOrderReport.do">
+                                    <i class='${sessionScope.Controller == 'shippingOrderReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Embarques al Cliente</a></li>                                    
+                            <li><a href="shippingOrderHistoryReport.do">
+                                    <i class='${sessionScope.Controller == 'shippingOrderHistoryReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Historial Embarques al Cliente</a></li>                                    
+                            <li><a href="binInventoryReport.do">
+                                    <i class='${sessionScope.Controller == 'binInventoryReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Inventario de Bines</a></li>                                    
+                            <li><a href="binHistoryReport.do">
+                                    <i class='${sessionScope.Controller == 'binHistoryReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Recibo de Bines</a></li>                                    
+                            <li><a href="rawMaterialInventoryReport.do">
+                                    <i class='${sessionScope.Controller == 'rawMaterialInventoryReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Inventario de Insumos</a></li>                                    
+                            <li><a href="rawMaterialInventoryLogReport.do">
+                                    <i class='${sessionScope.Controller == 'rawMaterialInventoryLogReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Recibo de Insumos</a></li>                                    
+                            <li><a href="dashboard.do">
+                                    <i class='${sessionScope.Controller == 'dashboard.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Tablero</a></li>                                    
+                        </ul>
+                    </li>   
+
+
+
+                    <li class="treeview ${sessionScope.acordion == 'Salir'  ? 'active' : ''}">
+                        <a href="${requestScope['javax.servlet.forward.context_path']}/public/logout"><i class='fa fa-sign-out'></i> <span>Salir</span></a>
+                    </li>                                        
+
+                </c:when>
+
+                <c:when test="${sessionScope.rol eq 'Supervisor Bomba'}">
+                    <li class="treeview ${sessionScope.acordion == 'TaskUser'  ? 'active' : ''}">
+                        <a href="#"><i class='fa fa-check-square-o'></i> <span>Tareas</span> <i class="fa fa-angle-left pull-right"></i></a>
+                        <ul class="treeview-menu">
+                            <li><a href="attendTask.do">
+                                    <i class='${sessionScope.Controller == 'attendTask.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    <span>Atender Tarea</span> <small class="label pull-right bg-red">${sessionScope.NuevaQty}</small></a></li>
+                            <li><a href="closeTask.do">
+                                    <i class='${sessionScope.Controller == 'closeTask.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    <span>Cerrar Tarea</span> <small class="label pull-right bg-red">${sessionScope.EnProcesoQty}</small></a></li>
+                        </ul>
+                    </li>
+
+                    <li class="treeview ${sessionScope.acordion == 'ApplicationUser'  ? 'active' : ''}">
+                        <a href="#"><i class='fa fa-check-square-o'></i> <span>Aplicación Foliar</span> <i class="fa fa-angle-left pull-right"></i></a>
+                        <ul class="treeview-menu">
+                            <li><a href="fillApplicationInfo.do">
+                                    <i class='${sessionScope.Controller == 'fillApplicationInfo.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    <span>Aspersión Foliar</span></a></li>
+                            <!--                            <li><a href="fillAspertionInfo.do">
+                                                                <i class='${sessionScope.Controller == 'fillAspertionInfo.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                                                <span>Aspersión Foliar</span></a></li>-->
+                        </ul>
+                    </li>
+
+                    <li class="treeview ${sessionScope.acordion == 'IrrigationUser'  ? 'active' : ''}">
+                        <a href="#"><i class='fa fa-check-square-o'></i> <span>Riego</span> <i class="fa fa-angle-left pull-right"></i></a>
+                        <ul class="treeview-menu">
+                            <li><a href="fillIrrigationInfo.do">
+                                    <i class='${sessionScope.Controller == 'fillIrrigationInfo.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    <span>Aplicación</span></a></li>
+                        </ul>
+                    </li>
+
+                    <li class="treeview ${sessionScope.acordion == 'Comments'  ? 'active' : ''}">
+                        <a href="#"><i class='fa fa-check-square-o'></i> <span>Comentarios</span> <i class="fa fa-angle-left pull-right"></i></a>
+                        <ul class="treeview-menu">
+                            <li><a href="commentsFarmingInfo.do">
+                                    <i class='${sessionScope.Controller == 'commentsFarmingInfo.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    <span>Labranza</span></a></li>
+                            <li><a href="commentsApplicationInfo.do">
+                                    <i class='${sessionScope.Controller == 'commentsApplicationInfo.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    <span>Aplicación Foliar</span></a></li>
+                            <li><a href="commentsPickingInfo.do">
+                                    <i class='${sessionScope.Controller == 'commentsPickingInfo.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    <span>Cosecha</span></a></li>
+                            <li><a href="commentsJournalInfo.do">
+                                    <i class='${sessionScope.Controller == 'commentsJournalInfo.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    <span>Jornal</span></a></li>
+                            <li><a href="commentsIrrigationInfo.do">
+                                    <i class='${sessionScope.Controller == 'commentsIrrigationInfo.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    <span>Riego</span></a></li>
+                        </ul>
+                    </li>
+
+                    <li class="treeview ${sessionScope.acordion == 'Salir'  ? 'active' : ''}">
+                        <a href="${requestScope['javax.servlet.forward.context_path']}/public/logout"><i class='fa fa-sign-out'></i> <span>Salir</span> <i class="fa fa-angle-left pull-right"></i></a>
+                    </li>    
+                </c:when>    
+
+                <c:when test="${sessionScope.rol eq 'Broker'}">
+                    <li class="treeview ${sessionScope.acordion == 'Crossdock'  ? 'active' : ''}">
+                        <a href="#"><i class='fa fa-building-o'></i> <span>Bodega</span> <i class="fa fa-angle-left pull-right"></i></a>
+                        <ul class="treeview-menu">
+                            <li><a href="newShippingOrder.do">
+                                    <i class='${sessionScope.Controller == 'newShippingOrder.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Orden de Embarque</a></li>
+                        </ul>
+                    </li>
+                    <li class="treeview ${sessionScope.acordion == 'Report'  ? 'active' : ''}">
+                        <a href="#"><i class='fa fa-file-text-o'></i> <span>Reportes</span> <i class="fa fa-angle-left pull-right"></i></a>
+                        <ul class="treeview-menu">                                 
+                            <li><a href="shippingOrderReport.do">
+                                    <i class='${sessionScope.Controller == 'shippingOrderReport.do' ? 'fa fa-dot-circle-o text-red' : 'fa fa-circle-o'}'></i>
+                                    Reporte de Embarques</a></li>                                    
+                        </ul>
+                    </li>  
+                    <li class="treeview ${sessionScope.acordion == 'Salir'  ? 'active' : ''}">
+                        <a href="${requestScope['javax.servlet.forward.context_path']}/public/logout"><i class='fa fa-sign-out'></i> <span>Salir</span> <i class="fa fa-angle-left pull-right"></i></a>
+                    </li>  
+                </c:when>    
+
+                <c:otherwise>
+                    <li class="treeview ${sessionScope.acordion == 'Salir'  ? 'active' : ''}">
+                        <a href="${requestScope['javax.servlet.forward.context_path']}/public/logout"><i class='fa fa-sign-out'></i> <span>Salir</span> <i class="fa fa-angle-left pull-right"></i></a>
+                    </li>                                        
+                </c:otherwise>
+            </c:choose>
+        </ul><!-- /.sidebar-menu -->
+    </section>
+    <!-- /.sidebar -->
+</aside>

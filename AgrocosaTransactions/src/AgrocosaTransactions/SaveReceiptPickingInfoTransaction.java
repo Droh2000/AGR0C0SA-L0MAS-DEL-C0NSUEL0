@@ -1,0 +1,511 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package AgrocosaTransactions;
+
+import SIDWebEngine.*;
+import java.sql.*;
+import xmlNodeArray.*;
+
+public class SaveReceiptPickingInfoTransaction extends SIDWebTransaction {
+
+    protected PreparedStatement pstmtSelectBinInventory;
+    protected PreparedStatement pstmtInsertBinInventory;
+    protected PreparedStatement pstmtUpdateBinInventory;
+    protected PreparedStatement pstmtInsertBinInventoryMovement;
+    protected PreparedStatement pstmtSelectStorage;
+    protected PreparedStatement pstmtUser;
+    protected PreparedStatement pstmtSelectTaskCrop;
+    protected PreparedStatement pstmtInsertTaskHistory;
+
+    /**
+     * Default Constructor
+     *
+     * @exception (none)
+     */
+    public SaveReceiptPickingInfoTransaction() {
+        super();
+        SetTransactionType(SIDWebTransaction.SaveType);
+    }
+
+    /**
+     * Checks to see if the node Array is supported
+     *
+     * @param nodeArray
+     * @return <B>true</B> if the nodeArray is supported. <B>false</B> otherwise
+     * @exception (none)
+     */
+    @Override
+    public boolean Supports(xmlNodeArray nodeArray) {
+
+        //Add tag names as comma separated Strings to the mandatoryTags array
+        String[] mandatoryTags = {
+            "idUser",
+            "idTask"
+        };
+
+        //Add tag names as comma separated Strings to the optionalTags array
+        String[] optionalTags = {};
+        //Add tag names as comma separated Strings to the mandatorySets array
+        String[] mandatorySets = {};
+        //Add tag names as comma separated Strings to the optionalSetTags array
+        String[] optionalSets = {};
+
+        xmlNodeArray errArray = new xmlNodeArray();
+        for (int i = 0; i < mandatoryTags.length; i++) {
+            if (!nodeArray.existValue(mandatoryTags[i])) {
+                System.out.println("<SaveReceiptPickingInfoTransaction::Supports> " + mandatoryTags[i] + " Mandatory tag not found or value is empty/null");
+                errArray.add("ERROR", "MANDATORY_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalTags.length; i++) {
+            if (nodeArray.exist(optionalTags[i]) && !nodeArray.existValue(optionalTags[i])) {
+                System.out.println("<SaveReceiptPickingInfoTransaction::Supports> " + optionalTags[i] + " Optional tag not found or value is empty/null");
+                errArray.add("OPTIONAL_TAG_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < mandatorySets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) == null || nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0) {
+                System.out.println("<SaveReceiptPickingInfoTransaction::Supports> " + mandatorySets[i] + " Mandatory Set not found or value is empty/null");
+                errArray.add("MANDATORY_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        for (int i = 0; i < optionalSets.length; i++) {
+            if (nodeArray.find(mandatorySets[i]) != null && (nodeArray.find(mandatorySets[i]).getTable() == null || nodeArray.find(mandatorySets[i]).getTable().getRowsQty() == 0)) {
+                System.out.println("<SaveReceiptPickingInfoTransaction::Supports> " + optionalSets[i] + " Optional Set not found or value is empty/null");
+                errArray.add("OPTIONAL_SET_NOT_FOUND_ERROR");
+                errArray.add("ERROR_MSG", mandatoryTags[i]);
+                this.SetError(errArray);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Prepares the SQL statements to be executed
+     *
+     * @return <B>true</B> for successful preparation; <B>false</B> for
+     * unsuccessful preparation
+     * @exception (none)
+     */
+    @Override
+    public synchronized boolean PrepareStatements() {
+        //Note1 : Use PreparedStatements instead of Statements where ever possible
+        //Note2 : If transaction contains no prepared statements, delete entire function
+        //        Unless there are nested transaction, then Prepare will call those.
+        try {
+            Connection con = this.GetSIDDataBase().GetConnection();
+
+            pstmtSelectBinInventory = con.prepareStatement("select "
+                    + "idStorage, "
+                    + "idSubstorage, "
+                    + "CropName, "
+                    + "Quantity "
+                    + "from bininventory "
+                    + "where idStorage = ? "//1 idStorage
+                    + "and idSubstorage = ? "//2 idSubstorage
+                    + "and CropName = ? ");//3 CropName
+
+            pstmtInsertBinInventory = con.prepareStatement("insert into bininventory ( "
+                    + "idStorage, "
+                    + "idSubstorage, "
+                    + "CropName, "
+                    + "Quantity "
+                    + ") values ("
+                    + "?, "//1 idStorage
+                    + "?, "//2 idSubstorage
+                    + "?, "//3 CropName
+                    + "? "//4 Quantity
+                    + ")");
+
+            pstmtUpdateBinInventory = con.prepareStatement("update bininventory set "
+                    + "Quantity = Quantity + ? "//1 Quanity
+                    + "where idStorage = ? "//2 idStorage
+                    + "and idSubstorage = ? "//3 idSubstorage
+                    + "and CropName = ? ");//4 CropName
+
+            pstmtInsertBinInventoryMovement = con.prepareStatement("insert into bininventorymovement ( "
+                    + "idTask, "
+                    + "TaskType, "
+                    + "MovementType, "
+                    + "CropTypeName, "
+                    + "CropName, "
+                    + "Quantity, "
+                    + "StorageName, "
+                    + "SubstorageName, "
+                    + "Weight, "
+                    + "UOM, "
+                    + "Comments, "
+                    + "User, "
+                    + "InsertDate, "
+                    + "Active "
+                    + ") values ( "
+                    + "?, "//1 idTask
+                    + "?, "//2 TaskType
+                    + "?, "//3 MovementType
+                    + "?, "//4 CropTypeName
+                    + "?, "//5 CropName
+                    + "?, "//6 Quantity
+                    + "?, "//7 StorageName
+                    + "?, "//8 SubstorageName
+                    + "?, "//9 Weight
+                    + "?, "//10 UOM
+                    + "?, "//11 Comments
+                    + "?, "//12 User
+                    + "Now(), "
+                    + "1 "
+                    + ")");
+
+            pstmtSelectStorage = con.prepareStatement("SELECT "
+                    + "storage.idStorage, "
+                    + "storage.StorageName, "
+                    + "substorage.idSubstorage, "
+                    + "substorage.SubstorageName "
+                    + "FROM storage inner join "
+                    + "substorage on substorage.idStorage = storage.idStorage "
+                    + "where storage.StorageName = ? "//1 StorageNAme
+                    + "and substorage.SubstorageName = ?");//2 SubstorageName
+
+            pstmtUser = con.prepareStatement("select concat(FirstName,' ',LastName) User "
+                    + "from user "
+                    + "where idUser = ? ");
+
+            pstmtSelectTaskCrop = con.prepareStatement("SELECT "
+                    + "CropTypeName, "
+                    + "CropName "
+                    + "FROM taskcrop "
+                    + "Where idTask = ? "
+                    + "and CropName = ? ");
+
+            pstmtInsertTaskHistory = con.prepareStatement("insert into taskhistory ( "
+                    + "idTask, "
+                    + "TaskType, "
+                    + "CampName, "
+                    + "SectionName, "
+                    + "LaborTypeName, "
+                    + "SectionCrop, "
+                    + "TaskDate, "
+                    + "Status, "
+                    + "Comments, "
+                    + "User, "
+                    + "InsertDate, "
+                    + "SupervisorName "
+                    + ") values( "
+                    + "?, "//1 idTask
+                    + "?, "//2 TaskTYpe
+                    + "?, " //3 CAmpName
+                    + "?, " //4 SectionName
+                    + "?, " //5 LaborTypeName
+                    + "?, " //6 SectionCrop
+                    + "STR_TO_DATE(?,'%d/%m/%Y'), " //7 TaskDate
+                    + "?, "//8 Status
+                    + "?, "//8 Comments
+                    + "?, "//10 User
+                    + "Now(), "
+                    + "? " //11 Supervisor Name
+                    + ")");
+
+            this.addPreparedStatement(pstmtSelectBinInventory);
+            this.addPreparedStatement(pstmtInsertBinInventory);
+            this.addPreparedStatement(pstmtUpdateBinInventory);
+            this.addPreparedStatement(pstmtInsertBinInventoryMovement);
+            this.addPreparedStatement(pstmtSelectStorage);
+            this.addPreparedStatement(pstmtUser);
+            this.addPreparedStatement(pstmtSelectTaskCrop);
+            this.addPreparedStatement(pstmtInsertTaskHistory);
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println("SaveReceiptPickingInfoTransaction::PrepareStatements> SQLException: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * executes sql statements using input arguments and returns result
+     *
+     * @return valid node array if successful else null
+     * @exception SQLException if sql error occurs
+     * @exception Exception if non sql error occurs
+     */
+    @Override
+    public synchronized xmlNodeArray Execute() throws SQLException, Exception {
+        Connection conn = null;
+        ResultSet rset = null;
+        xmlNodeArray resultArray = null;
+        int rowsAffected = 0;
+        int idUser = 0;
+        int idTask = 0;
+        String weight = "";
+        String uom = "";
+        int binQty = 0;
+        String cropName = "";
+        String storageName = "";
+        String substorageName = "";
+        String userName = "";
+        int idStorage = 0;
+        int idSubstorage = 0;
+        boolean boolSave = false;
+        String cropTypeName = "";
+        String comments = "";
+
+        try {
+
+            conn = this.GetSIDDataBase().GetConnection();
+            conn.setAutoCommit(false);
+            resultArray = new xmlNodeArray();
+
+            idUser = GetNodeArray().find("idUser").getIntValue();
+            idTask = GetNodeArray().find("idTask").getIntValue();
+
+            if (this.GetNodeArray().existValue("weight")) {
+                weight = GetNodeArray().find("weight").getStringValue();
+            }
+            if (this.GetNodeArray().existValue("uom")) {
+                uom = GetNodeArray().find("uom").getStringValue();
+            }
+            if (this.GetNodeArray().existValue("binQty")) {
+                binQty = GetNodeArray().find("binQty").getIntValue();
+            }
+            if (this.GetNodeArray().existValue("cropName")) {
+                cropName = GetNodeArray().find("cropName").getStringValue();
+            }
+            if (this.GetNodeArray().existValue("storageName")) {
+                storageName = GetNodeArray().find("storageName").getStringValue();
+            }
+            if (this.GetNodeArray().existValue("substorageName")) {
+                substorageName = GetNodeArray().find("substorageName").getStringValue();
+            }
+            if (this.GetNodeArray().existValue("comments")) {
+                comments = GetNodeArray().find("comments").getStringValue();
+            }
+
+            //User Name
+            pstmtUser.setInt(1, idUser);
+            rset = pstmtUser.executeQuery();
+            if (rset.next()) {
+                userName = rset.getString("User");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            //StorageName & SubstorageName
+            pstmtSelectStorage.setString(1, storageName);
+            pstmtSelectStorage.setString(2, substorageName);
+            rset = pstmtSelectStorage.executeQuery();
+            if (rset.next()) {
+                idStorage = rset.getInt("idStorage");
+                idSubstorage = rset.getInt("idSubstorage");
+            }
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+
+            //validate if record exist in bininventory table
+            pstmtSelectBinInventory.setInt(1, idStorage);
+            pstmtSelectBinInventory.setInt(2, idSubstorage);
+            pstmtSelectBinInventory.setString(3, cropName);
+            rset = pstmtSelectBinInventory.executeQuery();
+            if (rset.next()) {
+                //update
+                pstmtUpdateBinInventory.setInt(1, binQty);
+                pstmtUpdateBinInventory.setInt(2, idStorage);
+                pstmtUpdateBinInventory.setInt(3, idSubstorage);
+                pstmtUpdateBinInventory.setString(4, cropName);
+                rowsAffected = pstmtUpdateBinInventory.executeUpdate();
+                if (rowsAffected > 0) {
+                    boolSave = true;
+                }
+            } else {
+                //insert
+                pstmtInsertBinInventory.setInt(1, idStorage);
+                pstmtInsertBinInventory.setInt(2, idSubstorage);
+                pstmtInsertBinInventory.setString(3, cropName);
+                pstmtInsertBinInventory.setInt(4, binQty);
+                rowsAffected = pstmtInsertBinInventory.executeUpdate();
+                if (rowsAffected > 0) {
+                    boolSave = true;
+                }
+            }
+
+            if (boolSave) {
+
+                pstmtSelectTaskCrop.setInt(1, idTask);
+                pstmtSelectTaskCrop.setString(2, cropName);
+                rset = pstmtSelectTaskCrop.executeQuery();
+                if (rset.next()) {
+                    cropTypeName = rset.getString("CropTypeName");
+                }
+                if (rset != null) {
+                    rset.close();
+                    rset = null;
+                }
+
+                //insert bininventorymovement
+                pstmtInsertBinInventoryMovement.setInt(1, idTask);
+                pstmtInsertBinInventoryMovement.setString(2, "Cosecha");
+                pstmtInsertBinInventoryMovement.setString(3, "Entrada");
+                pstmtInsertBinInventoryMovement.setString(4, cropTypeName);
+                pstmtInsertBinInventoryMovement.setString(5, cropName);
+                pstmtInsertBinInventoryMovement.setInt(6, binQty);
+                pstmtInsertBinInventoryMovement.setString(7, storageName);
+                pstmtInsertBinInventoryMovement.setString(8, substorageName);
+                pstmtInsertBinInventoryMovement.setString(9, weight);
+                pstmtInsertBinInventoryMovement.setString(10, uom);
+                pstmtInsertBinInventoryMovement.setString(11, comments);
+                pstmtInsertBinInventoryMovement.setString(12, userName);
+                rowsAffected = pstmtInsertBinInventoryMovement.executeUpdate();
+                if (rowsAffected > 0) {
+                    
+                    comments = "Recibido " + weight + " " + uom + ", " + binQty + " bines asignados en: " + storageName + " | " + substorageName;
+                    
+                    //insert task history
+                    pstmtInsertTaskHistory.setInt(1, idTask);
+                    pstmtInsertTaskHistory.setString(2, "Cosecha");
+                    pstmtInsertTaskHistory.setString(3, "");
+                    pstmtInsertTaskHistory.setString(4, "");
+                    pstmtInsertTaskHistory.setString(5, "");
+                    pstmtInsertTaskHistory.setString(6, cropName);
+                    pstmtInsertTaskHistory.setString(7, "");
+                    pstmtInsertTaskHistory.setString(8, "Recibo");
+                    pstmtInsertTaskHistory.setString(9, comments);
+                    pstmtInsertTaskHistory.setString(10, userName);
+                    pstmtInsertTaskHistory.setString(11, "");
+                    rowsAffected = pstmtInsertTaskHistory.executeUpdate();
+
+                    if (rowsAffected > 0) {
+                        conn.commit();
+                        resultArray.add("Result", "Los datos del recibo han sido registrados exitosamente.");
+                        resultArray.add("RESPONSE_CODE", "PASS");
+                        resultArray.add("RESPONSE_MESSAGE", "Datos del recibo registrados exitosamente.");
+                        resultArray.add("RESPONSE_DETAIL", "");
+                    } else {
+                        conn.rollback();
+                        resultArray.add("Result", "Los datos del recibo no pudieron ser registrados.");
+                        resultArray.add("RESPONSE_CODE", "FAIL");
+                        resultArray.add("RESPONSE_MESSAGE", "La Informacion no pudo ser registrada.");
+                        resultArray.add("RESPONSE_DETAIL", "");
+                    }
+                } else {
+                    conn.rollback();
+                    resultArray.add("Result", "Los datos del recibo no pudieron ser registrados.");
+                    resultArray.add("RESPONSE_CODE", "FAIL");
+                    resultArray.add("RESPONSE_MESSAGE", "La Informacion no pudo ser registrada.");
+                    resultArray.add("RESPONSE_DETAIL", "");
+                }
+            } else {
+                conn.rollback();
+                resultArray.add("Result", "Los datos del recibo no pudieron ser registrados.");
+                resultArray.add("RESPONSE_CODE", "FAIL");
+                resultArray.add("RESPONSE_MESSAGE", "La Informacion no pudo ser registrada.");
+                resultArray.add("RESPONSE_DETAIL", "");
+            }
+
+            return resultArray;
+
+        } catch (SQLException e) {
+            conn.rollback();
+            System.out.println("SaveReceiptPickingInfoTransaction::Execute> SQLException: " + e.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "SQLException:" + e.getMessage());
+            resultArray.add("RESPONSE_DETAIL", e.getMessage());
+            return resultArray;
+        } catch (Exception ex) {
+            conn.rollback();
+            System.out.println("SaveReceiptPickingInfoTransaction::Execute> Exception: " + ex.getMessage());
+            resultArray = new xmlNodeArray();
+            resultArray.add("RESPONSE_CODE", "FAIL");
+            resultArray.add("RESPONSE_MESSAGE", "Exception:" + ex.getMessage());
+            resultArray.add("RESPONSE_DETAIL", ex.getMessage());
+            return resultArray;
+        } finally {
+            CloseStatements();
+            if (rset != null) {
+                rset.close();
+                rset = null;
+            }
+        }
+    }
+
+    /**
+     * Generates an xmlNodeArray containing parameters for this transaction
+     *
+     * @return xmlNodeArray that contains parameters for the transaction
+     * @exception (none)
+     */
+    @Override
+    public xmlNodeArray GenerateTestParameters() {
+        xmlNodeArray nodeArr = new xmlNodeArray();
+        nodeArr.add("TRANSACTION_CLASS_TO_EXECUTE", "JonesPlasticTransactions.SaveReceiptPickingInfoTransaction");
+
+        return nodeArr;
+
+    }
+
+    /**
+     * The main method for the transaction. Creates a database connection and an
+     * error Array, then executes the transaction and reports any errors
+     *
+     * @param argv argv[0] is an optional configuration file name
+     * @exception (none)
+     */
+    public static void main(String[] argv) {
+        try {
+            SaveReceiptPickingInfoTransaction transaction = new SaveReceiptPickingInfoTransaction();
+            SIDWebTransaction resultTransaction = null;
+            xmlNodeArray inputParameterArray = null;
+            //CIMDataBase database = null;
+            System.out.println("Usage: java -classpath ...JonesPlasticTransactions.SaveReceiptPickingInfoTransaction");
+
+            //<Add Database connection parameter for testing>
+            database = new SIDDataBase("jdbc:mysql://localhost:3306/agrocosa", "root", "entrar123");
+
+            transaction.SetSIDDataBase(database);
+            inputParameterArray = transaction.GenerateTestParameters();
+            if (!transaction.IsValidTransaction()) {
+                System.out.println(" SaveReceiptPickingInfoTransaction contains an invalid transaction type.");
+            } else {
+                if (!transaction.Supports(inputParameterArray)) {
+                    System.out.println(" SaveReceiptPickingInfoTransaction does not support this list of parameters.");
+                } else {
+                    resultTransaction = database.ExecuteTransaction("JonesPlasticTransactions.SaveReceiptPickingInfoTransaction", inputParameterArray);
+                    if (resultTransaction == null) {
+                        System.out.println("The transaction's result array is null.");
+                    } else {
+                        if (resultTransaction.GetError() != null) {
+                            resultTransaction.GetError().print();
+                        } else {
+                            if (resultTransaction.GetResultArray() == null) {
+                                System.out.println("SaveReceiptPickingInfoTransaction - No results were returned.");
+                            } else {
+                                xmlNodeArray array = resultTransaction.GetResultArray();
+                                String str = xmlNodeArray.xmlNodeArray2String(array);
+                                array = xmlNodeArray.string2xmlNodeArray(str);
+                                System.out.println(str);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("SaveReceiptPickingInfoTransaction::main> caught exception " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}
