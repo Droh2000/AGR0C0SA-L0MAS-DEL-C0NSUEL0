@@ -61,11 +61,11 @@ public class WarehouseTypeManagementServlet extends SIDServlet {
             }
 
             if (txnNA != null) {
-                txnNA.add("JspPage", "/warehouseType.page");
+                txnNA.add("JspPage", "/warehouseTypeManagement.page");
                 session.setAttribute("TxData", txnNA);
                 response.sendRedirect("management.do");
             } else {
-                rd = request.getRequestDispatcher("/warehouseType.page");
+                rd = request.getRequestDispatcher("/warehouseTypeManagement.page");
                 rd.forward(request, response);
             }
 

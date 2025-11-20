@@ -483,8 +483,12 @@
         <put-attribute name="title" value="Agrocosa" />
         <put-attribute name="publicbody" value="/WEB-INF/tiles/common/thanks.jsp" />
     </definition>   
-    <definition name="warehouseType.page" extends="commonLayout">
+    <definition name="warehouseTypeManagement.page" extends="commonLayout">
         <put-attribute name="title" value="Agrocosa" />
-        <put-attribute name="body" value="/WEB-INF/tiles/page/warehouseType.jsp" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/warehouseTypeManagement.jsp" />
     </definition>  
+    <definition name="warehouseProductManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/warehouseProductManagement.jsp" />
+    </definition>
 </tiles-definitions>

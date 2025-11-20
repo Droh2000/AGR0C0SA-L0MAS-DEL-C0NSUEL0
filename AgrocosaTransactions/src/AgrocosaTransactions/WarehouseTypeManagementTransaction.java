@@ -233,7 +233,6 @@ public class WarehouseTypeManagementTransaction extends SIDWebTransaction {
             resultArray.add("RESPONSE_CODE", "FAIL");
             resultArray.add("RESPONSE_MESSAGE", "SQLException");
             resultArray.add("RESPONSE_DETAIL", e.getMessage());
-//            e.printStackTrace();
             return resultArray;
         } catch (Exception ex) {
             conn.rollback();
@@ -242,7 +241,6 @@ public class WarehouseTypeManagementTransaction extends SIDWebTransaction {
             resultArray.add("RESPONSE_CODE", "FAIL");
             resultArray.add("RESPONSE_MESSAGE", "Exception");
             resultArray.add("RESPONSE_DETAIL", ex.getMessage());
-//            ex.printStackTrace();
             return resultArray;
         } finally {
             if (rset != null) {
