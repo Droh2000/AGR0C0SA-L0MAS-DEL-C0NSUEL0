@@ -653,10 +653,6 @@
         <servlet-class>Agrocosa.ShippingEditReportServlet</servlet-class>
     </servlet>
     <servlet>
-        <servlet-name>TestManagementServlet</servlet-name>
-        <servlet-class>Agrocosa.TestManagementServlet</servlet-class>
-    </servlet>
-    <servlet>
         <servlet-name>AssignWeightRampServlet</servlet-name>
         <servlet-class>Agrocosa.AssignWeightRampServlet</servlet-class>
     </servlet>
@@ -687,6 +683,18 @@
     <servlet>
         <servlet-name>UomManagementServlet</servlet-name>
         <servlet-class>Agrocosa.UomManagementServlet</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>WarehouseStorageManagementServlet</servlet-name>
+        <servlet-class>Agrocosa.WarehouseStorageManagementServlet</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>WarehouseSubstorageManagementServlet</servlet-name>
+        <servlet-class>Agrocosa.WarehouseSubstorageManagementServlet</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>CompanyLocationManagementServlet</servlet-name>
+        <servlet-class>Agrocosa.CompanyLocationManagementServlet</servlet-class>
     </servlet>
     <!-- ========================================================================= -->
     <!--        END Servlet config            -->
@@ -1308,10 +1316,6 @@
         <url-pattern>/protected/shippingEditReport.do</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
-        <servlet-name>TestManagementServlet</servlet-name>
-        <url-pattern>/protected/testManagement.do</url-pattern>
-    </servlet-mapping>
-    <servlet-mapping>
         <servlet-name>AssignWeightRampServlet</servlet-name>
         <url-pattern>/protected/assignWeightRamp.do</url-pattern>
     </servlet-mapping>
@@ -1346,6 +1350,18 @@
     <servlet-mapping>
         <servlet-name>UomManagementServlet</servlet-name>
         <url-pattern>/protected/uomManagement.do</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>WarehouseStorageManagementServlet</servlet-name>
+        <url-pattern>/protected/warehouseStorageManagement.do</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>WarehouseSubstorageManagementServlet</servlet-name>
+        <url-pattern>/protected/warehouseSubstorageManagement.do</url-pattern>
+    </servlet-mapping>
+        <servlet-mapping>
+        <servlet-name>CompanyLocationManagementServlet</servlet-name>
+        <url-pattern>/protected/companyLocationManagement.do</url-pattern>
     </servlet-mapping>
     <!--         END Servlet Mapping config            -->
 </web-app>

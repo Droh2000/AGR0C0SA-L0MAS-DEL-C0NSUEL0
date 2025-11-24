@@ -495,4 +495,16 @@
         <put-attribute name="title" value="Agrocosa" />
         <put-attribute name="body" value="/WEB-INF/tiles/page/uomManagement.jsp" />
     </definition>
+    <definition name="warehouseStorageManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/warehouseStorageManagement.jsp" />
+    </definition>
+    <definition name="warehouseSubstorageManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/warehouseSubstorageManagement.jsp" />
+    </definition>
+    <definition name="companyLocationManagement.page" extends="commonLayout">
+        <put-attribute name="title" value="Agrocosa" />
+        <put-attribute name="body" value="/WEB-INF/tiles/page/companyLocationManagement.jsp" />
+    </definition>
 </tiles-definitions>
